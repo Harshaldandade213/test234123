@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8001';
 
 export interface DocumentInfo {
   id: string;
@@ -606,3 +606,6 @@ export interface MultiDocumentInsights {
 }
 
 export const apiService = new ApiService();
+
+// Export integrated API service for dual backend support
+export { integratedApiService } from './integrated-api';

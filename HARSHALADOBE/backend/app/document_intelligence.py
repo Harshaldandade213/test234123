@@ -19,7 +19,9 @@ except ImportError:
 
 # Initialize Gemini and embedding model
 try:
-    genai.configure(api_key=os.getenv('GEMINI_API_KEY'))
+    # Use the new Gemini API key
+    gemini_api_key = os.getenv('GEMINI_API_KEY', 'AIzaSyB53CfT8KbKwgA2NzdHtVZhN9WDkR0Jm1w')
+    genai.configure(api_key=gemini_api_key)
     gemini_model = genai.GenerativeModel('gemini-1.5-flash')
     if SEMANTIC_SEARCH_AVAILABLE:
         embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
@@ -27,6 +29,7 @@ try:
     else:
         embedding_model = None
         print("Semantic search not available, using fallback search")
+    print("Gemini model initialized successfully")
 except Exception as e:
     print(f"Warning: Could not initialize models: {e}")
     gemini_model = None
@@ -118,12 +121,60 @@ def gemini_semantic_analysis(query: str, section_text: str, persona: str, job: s
             
     except Exception as e:
         print(f"Gemini semantic analysis error: {e}")
-        return {
-            "relevance_score": 0.5,
-            "relationship_type": "related",
-            "explanation": f"Semantic analysis failed: {str(e)}",
-            "key_concepts": []
-        }
+        # Check if it's a quota exceeded error
+        if "429" in str(e) or "quota" in str(e).lower():
+            # Use enhanced fallback for quota exceeded
+            return _generate_fallback_analysis(query, section_text, persona, job)
+        else:
+            return {
+                "relevance_score": 0.5,
+                "relationship_type": "related",
+                "explanation": f"Semantic analysis failed: {str(e)}",
+                "key_concepts": []
+            }
+
+def _generate_fallback_analysis(query: str, section_text: str, persona: str, job: str) -> Dict[str, Any]:
+    """Generate fallback analysis when Gemini API is unavailable due to quota limits."""
+    # Simple keyword-based analysis
+    query_lower = query.lower()
+    section_lower = section_text.lower()
+    
+    # Calculate keyword overlap
+    query_words = set(query_lower.split())
+    section_words = set(section_lower.split())
+    overlap = len(query_words & section_words)
+    total_query_words = len(query_words)
+    
+    # Calculate relevance score based on keyword overlap
+    if total_query_words > 0:
+        relevance_score = min(0.8, overlap / total_query_words + 0.2)
+    else:
+        relevance_score = 0.5
+    
+    # Determine relationship type based on content
+    relationship_type = "related"
+    if any(word in section_lower for word in ["example", "instance", "case"]):
+        relationship_type = "example"
+    elif any(word in section_lower for word in ["however", "but", "contrary", "opposite"]):
+        relationship_type = "contradicting"
+    elif any(word in section_lower for word in ["similar", "like", "same", "also"]):
+        relationship_type = "overlapping"
+    
+    # Generate explanation
+    if relevance_score > 0.6:
+        explanation = f"This section contains relevant information about {', '.join(list(query_words & section_words)[:3])} that aligns with your role as {persona.lower()}."
+    else:
+        explanation = f"This section provides complementary information that may support your understanding of {job.lower()}."
+    
+    # Extract key concepts
+    key_concepts = list(query_words & section_words)[:5]
+    
+    return {
+        "relevance_score": relevance_score,
+        "relationship_type": relationship_type,
+        "explanation": explanation,
+        "key_concepts": key_concepts
+    }
 
 def build_semantic_index(sections: List[Dict[str, Any]]) -> Tuple[Any, List[Dict[str, Any]]]:
     """Build a FAISS index for semantic search."""

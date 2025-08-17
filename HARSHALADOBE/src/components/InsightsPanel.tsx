@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Brain, FileText, Quote, Loader2, ExternalLink, AlertCircle, CheckCircle, XCircle, Info } from 'lucide-react';
+import { Brain, FileText, Quote, Loader2, ExternalLink, AlertCircle, CheckCircle, XCircle, Info, BarChart3 } from 'lucide-react';
 import { apiService, RelatedSection } from '@/lib/api';
+import { integratedApiService, DetailedAnalysisResult, PassageAnalysis } from '@/lib/integrated-api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -28,12 +29,17 @@ export function InsightsPanel({
   onPageNavigate 
 }: InsightsPanelProps) {
   const [relatedSections, setRelatedSections] = useState<RelatedSection[]>([]);
+  const [detailedAnalysis, setDetailedAnalysis] = useState<DetailedAnalysisResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isQueryAnalyzing, setIsQueryAnalyzing] = useState(false);
+  const [customQuery, setCustomQuery] = useState('');
+  const [queryAnalysis, setQueryAnalysis] = useState<DetailedAnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [persona, setPersona] = useState(propPersona || '');
   const [jobToBeDone, setJobToBeDone] = useState(propJobToBeDone || '');
 
-  // Fetch related sections when text is selected
+  // Fetch related sections and detailed analysis when text is selected
   useEffect(() => {
     const fetchRelatedSections = async () => {
       console.log('InsightsPanel useEffect triggered:', {
@@ -85,6 +91,12 @@ export function InsightsPanel({
         
         console.log('Top sections:', topSections);
         setRelatedSections(topSections);
+
+        // Automatically trigger detailed analysis when text is selected
+        if (currentText && currentText.length >= 20) {
+          console.log('Auto-triggering detailed analysis for selected text');
+          await fetchDetailedAnalysis();
+        }
       } catch (err) {
         console.error('Error fetching related sections:', err);
         setError('Failed to fetch related sections');
@@ -124,6 +136,64 @@ export function InsightsPanel({
     }
   };
 
+  const fetchDetailedAnalysis = async () => {
+    if (!persona || !jobToBeDone || documentIds.length === 0) {
+      setError('Please set persona and job to be done, and ensure documents are selected');
+      return;
+    }
+
+    // Use selected text as query if available, otherwise use a default query
+    const queryText = currentText || `Analysis for ${persona} doing ${jobToBeDone}`;
+
+    setIsAnalyzing(true);
+    setError(null);
+
+    try {
+      const analysis = await integratedApiService.getDetailedAnalysis(
+        documentIds,
+        persona,
+        jobToBeDone,
+        queryText
+      );
+      setDetailedAnalysis(analysis);
+    } catch (err) {
+      console.error('Error fetching detailed analysis:', err);
+      setError('Failed to fetch detailed analysis');
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  const analyzeCustomQuery = async () => {
+    if (!customQuery.trim()) {
+      setError('Please enter a query to analyze');
+      return;
+    }
+
+    setIsQueryAnalyzing(true);
+    setError(null);
+
+    try {
+      const analysis = await integratedApiService.analyzeQuery(customQuery.trim());
+      setQueryAnalysis(analysis);
+    } catch (err) {
+      console.error('Error analyzing custom query:', err);
+      setError('Failed to analyze custom query');
+    } finally {
+      setIsQueryAnalyzing(false);
+    }
+  };
+
+  const getCategoryBadge = (category: string) => {
+    switch (category.toLowerCase()) {
+      case 'agreement': return <Badge variant="default" className="bg-green-100 text-green-800">Agreement</Badge>;
+      case 'conflict': return <Badge variant="destructive">Conflict</Badge>;
+      case 'related point': return <Badge variant="secondary" className="bg-blue-100 text-blue-800">Related Point</Badge>;
+      case 'example': return <Badge variant="outline" className="border-purple-500 text-purple-700">Example</Badge>;
+      default: return <Badge variant="outline">{category}</Badge>;
+    }
+  };
+
   return (
     <div className="h-full flex flex-col bg-gradient-to-br from-background via-accent/20 to-secondary/10">
       <div className="p-6 border-b border-border bg-background/80 backdrop-blur-sm">
@@ -142,29 +212,268 @@ export function InsightsPanel({
 
       <ScrollArea className="flex-1 p-6">
             <div className="space-y-6">
-          {/* Selected Text Display */}
-          {currentText && currentText.length > 0 && (
+                     {/* Selected Text Display */}
+           {currentText && currentText.length > 0 && (
+             <Card className="bg-background/80 border-primary/20">
+               <CardHeader>
+                 <CardTitle className="flex items-center gap-2 text-lg">
+                   <Quote className="h-5 w-5 text-primary" />
+                   Selected Text
+                 </CardTitle>
+                 </CardHeader>
+               <CardContent>
+                 <div className="bg-muted/50 rounded-lg p-4">
+                   <p className="text-sm text-foreground leading-relaxed font-medium">
+                     "{currentText}"
+                   </p>
+                   {currentPage && (
+                     <p className="text-xs text-muted-foreground mt-2">
+                       Selected from page {currentPage}
+                     </p>
+                   )}
+                           </div>
+                         </CardContent>
+                       </Card>
+               )}
+
+           {/* Custom Query Analysis */}
+           <Card className="bg-background/80 border-primary/20">
+             <CardHeader>
+               <CardTitle className="flex items-center gap-2 text-lg">
+                 <Brain className="h-5 w-5 text-primary" />
+                 Custom Query Analysis
+               </CardTitle>
+             </CardHeader>
+             <CardContent className="space-y-4">
+               <div className="flex gap-2">
+                 <input
+                   type="text"
+                   value={customQuery}
+                   onChange={(e) => setCustomQuery(e.target.value)}
+                   placeholder="Enter your query (e.g., What are the challenges of Mars colonization?)"
+                   className="flex-1 px-3 py-2 border border-border rounded-md bg-background text-sm"
+                   onKeyPress={(e) => e.key === 'Enter' && analyzeCustomQuery()}
+                 />
+                 <Button 
+                   onClick={analyzeCustomQuery}
+                   disabled={isQueryAnalyzing || !customQuery.trim()}
+                   size="sm"
+                 >
+                   {isQueryAnalyzing ? (
+                     <>
+                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                       Analyzing...
+                     </>
+                   ) : (
+                     <>
+                       <Brain className="h-4 w-4 mr-2" />
+                       Analyze
+                     </>
+                   )}
+                 </Button>
+               </div>
+               <p className="text-xs text-muted-foreground">
+                 Use the adobev4 backend's analyze-query endpoint to get insights on any topic
+               </p>
+             </CardContent>
+           </Card>
+
+          {/* Detailed Analysis Button */}
+          {persona && jobToBeDone && documentIds.length > 0 && (
             <Card className="bg-background/80 border-primary/20">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
-                  <Quote className="h-5 w-5 text-primary" />
-                  Selected Text
+                  <BarChart3 className="h-5 w-5 text-primary" />
+                  Document Analysis
                 </CardTitle>
-                </CardHeader>
+              </CardHeader>
               <CardContent>
-                <div className="bg-muted/50 rounded-lg p-4">
-                  <p className="text-sm text-foreground leading-relaxed font-medium">
-                    "{currentText}"
-                  </p>
-                  {currentPage && (
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Selected from page {currentPage}
-                    </p>
-                  )}
-                          </div>
-                        </CardContent>
-                      </Card>
-              )}
+                                 <Button 
+                   onClick={fetchDetailedAnalysis}
+                   disabled={isAnalyzing}
+                   className="w-full"
+                 >
+                   {isAnalyzing ? (
+                     <>
+                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                       Analyzing Selected Text...
+                     </>
+                   ) : (
+                     <>
+                       <Brain className="h-4 w-4 mr-2" />
+                       {currentText ? 'Re-analyze Selected Text' : 'Run Document Analysis'}
+                     </>
+                   )}
+                 </Button>
+                 <p className="text-xs text-muted-foreground mt-2">
+                   {currentText 
+                     ? 'Get detailed analysis of the selected text with passage-by-passage breakdown'
+                     : 'Get comprehensive analysis of your documents with passage-by-passage breakdown'
+                   }
+                 </p>
+              </CardContent>
+            </Card>
+          )}
+
+                                {/* Detailed Analysis Results */}
+           {detailedAnalysis && (
+             <Card className="bg-background/80 border-primary/20">
+               <CardHeader>
+                 <CardTitle className="flex items-center gap-2 text-lg">
+                   <BarChart3 className="h-5 w-5 text-primary" />
+                   Analysis Results
+                   {currentText && (
+                     <Badge variant="secondary" className="ml-2 text-xs">
+                       Based on Selected Text
+                     </Badge>
+                   )}
+                 </CardTitle>
+               </CardHeader>
+               <CardContent className="space-y-4">
+                 {/* Query */}
+                 <div>
+                   <h4 className="font-semibold text-sm mb-2">
+                     Query: {currentText && (
+                       <span className="text-xs text-muted-foreground font-normal">
+                         (using selected text: {currentText.length} chars)
+                       </span>
+                     )}
+                   </h4>
+                   <p className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
+                     {detailedAnalysis.query}
+                   </p>
+                 </div>
+
+                 {/* Summary */}
+                 {detailedAnalysis.summary && (
+                   <div>
+                     <h4 className="font-semibold text-sm mb-2">Summary:</h4>
+                     <p className="text-sm text-foreground bg-muted/50 p-3 rounded-lg">
+                       {detailedAnalysis.summary}
+                     </p>
+                   </div>
+                 )}
+
+                 {/* Passage Analysis */}
+                 <div>
+                   <h4 className="font-semibold text-sm mb-3">Passage Analysis:</h4>
+                   <div className="space-y-3">
+                     {detailedAnalysis.analysis.map((passage, index) => (
+                       <div key={index} className="border border-border rounded-lg p-3 bg-muted/30">
+                         <div className="flex items-start justify-between mb-2">
+                           <div className="flex items-center gap-2">
+                             <span className="text-sm font-medium text-foreground">
+                               Passage {index + 1}
+                             </span>
+                             {passage.source && (
+                               <span className="text-xs text-muted-foreground">
+                                 ({passage.source})
+                               </span>
+                             )}
+                           </div>
+                           {getCategoryBadge(passage.category)}
+                         </div>
+                         
+                         <div className="mb-2">
+                           <h5 className="font-medium text-sm text-foreground mb-1">Justification:</h5>
+                           <p className="text-xs text-muted-foreground leading-relaxed">
+                             {passage.justification}
+                           </p>
+                         </div>
+
+                         {passage.quote && (
+                           <div>
+                             <h5 className="font-medium text-sm text-foreground mb-1">Quote:</h5>
+                             <div className="bg-background/80 p-2 rounded border-l-4 border-primary/50">
+                               <p className="text-xs text-foreground italic">
+                                 "{passage.quote}"
+                               </p>
+                             </div>
+                           </div>
+                         )}
+                       </div>
+                     ))}
+                   </div>
+                 </div>
+               </CardContent>
+             </Card>
+           )}
+
+           {/* Custom Query Analysis Results */}
+           {queryAnalysis && (
+             <Card className="bg-background/80 border-primary/20">
+               <CardHeader>
+                 <CardTitle className="flex items-center gap-2 text-lg">
+                   <BarChart3 className="h-5 w-5 text-primary" />
+                   Custom Query Analysis Results
+                   <Badge variant="secondary" className="ml-2 text-xs">
+                     Using adobev4 /analyze-query
+                   </Badge>
+                 </CardTitle>
+               </CardHeader>
+               <CardContent className="space-y-4">
+                 {/* Query */}
+                 <div>
+                   <h4 className="font-semibold text-sm mb-2">Query:</h4>
+                   <p className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
+                     {queryAnalysis.query}
+                   </p>
+                 </div>
+
+                 {/* Summary */}
+                 {queryAnalysis.summary && (
+                   <div>
+                     <h4 className="font-semibold text-sm mb-2">Summary:</h4>
+                     <p className="text-sm text-foreground bg-muted/50 p-3 rounded-lg">
+                       {queryAnalysis.summary}
+                     </p>
+                   </div>
+                 )}
+
+                 {/* Passage Analysis */}
+                 <div>
+                   <h4 className="font-semibold text-sm mb-3">Passage Analysis:</h4>
+                   <div className="space-y-3">
+                     {queryAnalysis.analysis.map((passage, index) => (
+                       <div key={index} className="border border-border rounded-lg p-3 bg-muted/30">
+                         <div className="flex items-start justify-between mb-2">
+                           <div className="flex items-center gap-2">
+                             <span className="text-sm font-medium text-foreground">
+                               Passage {index + 1}
+                             </span>
+                             {passage.source && (
+                               <span className="text-xs text-muted-foreground">
+                                 ({passage.source})
+                               </span>
+                             )}
+                           </div>
+                           {getCategoryBadge(passage.category)}
+                         </div>
+                         
+                         <div className="mb-2">
+                           <h5 className="font-medium text-sm text-foreground mb-1">Justification:</h5>
+                           <p className="text-xs text-muted-foreground leading-relaxed">
+                             {passage.justification}
+                           </p>
+                         </div>
+
+                         {passage.quote && (
+                           <div>
+                             <h5 className="font-medium text-sm text-foreground mb-1">Quote:</h5>
+                             <div className="bg-background/80 p-2 rounded border-l-4 border-primary/50">
+                               <p className="text-xs text-foreground italic">
+                                 "{passage.quote}"
+                               </p>
+                             </div>
+                           </div>
+                         )}
+                       </div>
+                     ))}
+                   </div>
+                 </div>
+               </CardContent>
+             </Card>
+           )}
 
           {/* Persona and Job Setup */}
           {(!persona || !jobToBeDone) && (

@@ -8,7 +8,8 @@ load_dotenv()
 
 class LLMService:
     def __init__(self):
-        self.api_key = os.getenv("GEMINI_API_KEY")
+        # Use the new Gemini API key
+        self.api_key = os.getenv("GEMINI_API_KEY", "AIzaSyB53CfT8KbKwgA2NzdHtVZhN9WDkR0Jm1w")
         self.model_name = "gemini-1.5-flash"
         self.model = None
         self._initialize_model()

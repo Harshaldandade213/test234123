@@ -56,7 +56,7 @@ const Library = () => {
         id: doc.id,
         name: doc.name,
         title: doc.title,
-        url: `http://localhost:8000/pdf/${doc.id}`, // Use backend PDF endpoint
+        url: `http://localhost:8001/pdf/${doc.id}`, // Use HARSHALADOBE backend PDF endpoint
         outline: buildHierarchicalOutline(doc.outline)
       };
     });
