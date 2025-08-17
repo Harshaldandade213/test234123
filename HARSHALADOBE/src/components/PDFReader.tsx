@@ -1,14 +1,20 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { AdobePDFViewer, FallbackPDFViewer } from './AdobePDFViewer';
+import { InsightsPanel } from './InsightsPanel';
 import { DocumentOutline } from './DocumentOutline';
 import { EnhancedLeftPanel } from './EnhancedLeftPanel';
-import { FloatingTools } from './FloatingTools';
-import { AdobePDFViewer, FallbackPDFViewer } from './AdobePDFViewer';
-import { CrossConnectionsPanel } from './CrossConnectionsPanel';
-import { StrategicInsightsPanel } from './StrategicInsightsPanel';
 import { EnhancedStrategicPanel } from './EnhancedStrategicPanel';
-import { InsightsPanel } from './InsightsPanel';
+import { CrossConnectionsPanel } from './CrossConnectionsPanel';
+import { FloatingTools } from './FloatingTools';
 
 // Hybrid PDF Viewer component that tries Adobe first, then falls back to iframe
 function HybridPDFViewer({ 
@@ -75,7 +81,6 @@ function HybridPDFViewer({
     </div>
   );
 }
-
 import { ThemeToggle } from './ThemeToggle';
 import { AccessibilityPanel } from './AccessibilityPanel';
 import { PodcastPanel } from './PodcastPanel';
@@ -98,7 +103,9 @@ import {
   Download,
   BarChart3,
   Bookmark,
-  X
+  X,
+  Navigation,
+  Search
 } from 'lucide-react';
 
 export interface PDFDocument {
@@ -152,6 +159,9 @@ export function PDFReader({ documents, persona, jobToBeDone, onBack }: PDFReader
   const [totalPages, setTotalPages] = useState(30); // Will be updated from PDF
   const [currentLanguage, setCurrentLanguage] = useState('en');
   const [insightMode, setInsightMode] = useState(false);
+  const [goToDialogOpen, setGoToDialogOpen] = useState(false);
+  const [goToPage, setGoToPage] = useState('');
+  const [manualText, setManualText] = useState('');
 
   // Sidebar resize functionality
   const [isResizing, setIsResizing] = useState(false);
@@ -623,6 +633,93 @@ export function PDFReader({ documents, persona, jobToBeDone, onBack }: PDFReader
               <Highlighter className="h-4 w-4" />
               AI Highlights
             </Button>
+            
+            <Dialog open={goToDialogOpen} onOpenChange={setGoToDialogOpen}>
+              <DialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-2 hover:bg-surface-hover"
+                  aria-label="Go to page or add text"
+                >
+                  <Navigation className="h-4 w-4" />
+                  Go To
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Go To Page & Add Text</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="page">Go to Page</Label>
+                    <Input
+                      id="page"
+                      type="number"
+                      placeholder="Enter page number"
+                      value={goToPage}
+                      onChange={(e) => setGoToPage(e.target.value)}
+                      min={1}
+                      max={totalPages}
+                    />
+                    <Button
+                      onClick={() => {
+                        const pageNum = parseInt(goToPage);
+                        if (pageNum >= 1 && pageNum <= totalPages) {
+                          setCurrentPage(pageNum);
+                          setGoToPage('');
+                          setGoToDialogOpen(false);
+                          toast({
+                            title: "Navigated to Page",
+                            description: `Page ${pageNum}`,
+                          });
+                        } else {
+                          toast({
+                            title: "Invalid Page",
+                            description: `Please enter a page number between 1 and ${totalPages}`,
+                            variant: "destructive"
+                          });
+                        }
+                      }}
+                      disabled={!goToPage}
+                      className="w-full"
+                    >
+                      Go to Page
+                    </Button>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="text">Add Text for Insights</Label>
+                    <Textarea
+                      id="text"
+                      placeholder="Enter text to analyze in the Insights panel..."
+                      value={manualText}
+                      onChange={(e) => setManualText(e.target.value)}
+                      rows={4}
+                    />
+                    <Button
+                      onClick={() => {
+                        if (manualText.trim()) {
+                          setSelectedText(manualText.trim());
+                          setRightPanelOpen(true);
+                          setActiveRightPanel('insights');
+                          setManualText('');
+                          setGoToDialogOpen(false);
+                          toast({
+                            title: "Text Added",
+                            description: "Text has been added to the Insights panel",
+                          });
+                        }
+                      }}
+                      disabled={!manualText.trim()}
+                      className="w-full"
+                    >
+                      Add to Insights
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
             
             <Button
               variant="ghost"

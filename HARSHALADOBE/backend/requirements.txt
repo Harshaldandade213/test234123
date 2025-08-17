@@ -12,3 +12,7 @@ azure-cognitiveservices-speech
 google-generativeai
 pydantic
 typing-extensions
+sentence-transformers
+faiss-cpu
+torch
+transformers

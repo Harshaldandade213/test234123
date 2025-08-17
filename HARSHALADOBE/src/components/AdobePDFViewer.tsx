@@ -440,12 +440,96 @@ export function AdobePDFViewer({
 
     // Add listeners with a delay to ensure the PDF is loaded
     const timeoutId = setTimeout(addListeners, 2000);
+    
+    // Enhanced copy event listener for Adobe PDF viewer
+    const handleCopyEvent = (e: ClipboardEvent) => {
+      const selection = window.getSelection();
+      if (selection && selection.toString().trim()) {
+        const text = selection.toString().trim();
+        console.log('Copy event detected:', text);
+        setSelectedText(text);
+        if (onTextSelection) {
+          onTextSelection(text, currentPage);
+        }
+        // Show toast notification
+        toast({
+          title: "Text Copied & Selected",
+          description: `"${text.substring(0, 50)}${text.length > 50 ? '...' : ''}"`,
+        });
+      }
+    };
+    
+    // Add copy event listener to document
+    document.addEventListener('copy', handleCopyEvent);
+    
+    // Also add a more robust iframe text selection handler
+    const iframeSelectionHandler = () => {
+      const iframe = document.querySelector('iframe');
+      if (iframe) {
+        try {
+          const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+          if (iframeDoc) {
+            // Add copy event listener to iframe
+            iframeDoc.addEventListener('copy', (e) => {
+              const selection = iframeDoc.getSelection();
+              if (selection && selection.toString().trim()) {
+                const text = selection.toString().trim();
+                console.log('Iframe copy event detected:', text);
+                setSelectedText(text);
+                if (onTextSelection) {
+                  onTextSelection(text, currentPage);
+                }
+                toast({
+                  title: "Text Copied from PDF",
+                  description: `"${text.substring(0, 50)}${text.length > 50 ? '...' : ''}"`,
+                });
+              }
+            });
+            
+            // Add selection change listener to iframe
+            iframeDoc.addEventListener('selectionchange', () => {
+              const selection = iframeDoc.getSelection();
+              if (selection && selection.toString().trim()) {
+                const text = selection.toString().trim();
+                console.log('Iframe text selection detected:', text);
+                setSelectedText(text);
+                if (onTextSelection) {
+                  onTextSelection(text, currentPage);
+                }
+              }
+            });
+            
+            // Add mouseup listener to iframe
+            iframeDoc.addEventListener('mouseup', (e) => {
+              setTimeout(() => {
+                const selection = iframeDoc.getSelection();
+                if (selection && selection.toString().trim()) {
+                  const text = selection.toString().trim();
+                  console.log('Iframe mouseup text selection:', text);
+                  setSelectedText(text);
+                  if (onTextSelection) {
+                    onTextSelection(text, currentPage);
+                  }
+                }
+              }, 100); // Small delay to ensure selection is complete
+            });
+          }
+        } catch (e) {
+          console.log('Could not access iframe content for enhanced text selection');
+        }
+      }
+    };
+    
+    // Add iframe handler with a longer delay
+    const iframeTimeoutId = setTimeout(iframeSelectionHandler, 3000);
 
     return () => {
       clearTimeout(timeoutId);
+      clearTimeout(iframeTimeoutId);
       document.removeEventListener('mouseup', handleTextSelection);
       document.removeEventListener('touchend', handleTextSelection);
       document.removeEventListener('contextmenu', handleContextMenu);
+      document.removeEventListener('copy', handleCopyEvent);
       
       const adobeContainer = document.getElementById('adobe-dc-view');
       if (adobeContainer) {
@@ -762,28 +846,67 @@ export function AdobePDFViewer({
           setIsReady(true);
         }, 8000);
 
-        // Register event listeners first
+        // Step 1: Enable PDF Analytics Events
+        const eventOptions = {
+          listenOn: [
+            "TEXT_COPY",
+            "TEXT_SELECTION",
+            "PAGE_VIEW",
+            "DOCUMENT_OPEN",
+            "APP_RENDERING_DONE",
+            "DOCUMENT_ERROR",
+            "APP_RENDERING_FAILED"
+          ],
+          enablePDFAnalytics: true
+        };
+
+        // Step 2: Register the Event Listener
         adobeDCView.registerCallback(
           window.AdobeDC.View.Enum.CallbackType.EVENT_LISTENER,
-          (event: any) => {
+          function(event: any) {
             console.log('Adobe PDF Event:', event.type, event.data);
+            
+            if (event.type === "TEXT_COPY") {
+              const selectedText = event.data.copiedText;
+              console.log("Selected text:", selectedText);
+              
+              // Add your logic here to process the selected text for insights
+              setSelectedText(selectedText);
+              if (onTextSelection) {
+                onTextSelection(selectedText, currentPage);
+              }
+              
+              // Show toast notification
+              toast({
+                title: "Text Selected",
+                description: `"${selectedText.substring(0, 50)}${selectedText.length > 50 ? '...' : ''}"`,
+              });
+            }
+            
+            if (event.type === "TEXT_SELECTION") {
+              console.log("Text selection event:", event.data);
+              if (event.data.selection) {
+                const selectedText = event.data.selection.text;
+                console.log("Text selected:", selectedText);
+                
+                setSelectedText(selectedText);
+                if (onTextSelection) {
+                  onTextSelection(selectedText, event.data.selection.pageNumber || currentPage);
+                }
+                
+                toast({
+                  title: "Text Selected",
+                  description: `"${selectedText.substring(0, 50)}${selectedText.length > 50 ? '...' : ''}"`,
+                });
+              }
+            }
+            
+            // Handle other events
             switch (event.type) {
               case "PAGE_VIEW":
                 setCurrentPage(event.data.pageNumber);
                 if (onPageChange) {
                   onPageChange(event.data.pageNumber);
-                }
-                break;
-              case "TEXT_SELECTION":
-                if (event.data.selection) {
-                  setSelectedText(event.data.selection.text);
-                  setCurrentPage(event.data.selection.pageNumber);
-                  if (onTextSelection) {
-                    onTextSelection(
-                      event.data.selection.text,
-                      event.data.selection.pageNumber
-                    );
-                  }
                 }
                 break;
               case "DOCUMENT_OPEN":
@@ -803,7 +926,7 @@ export function AdobePDFViewer({
                 break;
             }
           },
-          { enablePDFAnalytics: false }
+          eventOptions
         );
 
         // Load the PDF after setting up callbacks
@@ -1108,11 +1231,19 @@ export function FallbackPDFViewer({
   }, [pdfPage, onTextSelection]);
   
   const handleCopy = () => {
+    // Copy to clipboard
     navigator.clipboard.writeText(selectedText);
+    
+    // Send to insights section
+    if (onTextSelection) {
+      onTextSelection(selectedText, currentPage);
+    }
+    
     toast({
-      title: "Copied",
-      description: "Text copied to clipboard"
+      title: "Copied & Added to Insights",
+      description: `"${selectedText.substring(0, 50)}${selectedText.length > 50 ? '...' : ''}"`,
     });
+    
     setSelectedText('');
     setSelectionPosition(null);
   };

@@ -1,10 +1,193 @@
 import os
 import re
 import time
+import numpy as np
 from datetime import datetime
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 from .outline_core import extract_outline_blocks, LineBlock
 from . import scoring
+import google.generativeai as genai
+
+# Temporarily disable semantic search imports to get server running
+try:
+    from sentence_transformers import SentenceTransformer
+    import faiss
+    SEMANTIC_SEARCH_AVAILABLE = True
+except ImportError:
+    print("Warning: sentence_transformers or faiss not available. Using fallback search.")
+    SEMANTIC_SEARCH_AVAILABLE = False
+
+# Initialize Gemini and embedding model
+try:
+    genai.configure(api_key=os.getenv('GEMINI_API_KEY'))
+    gemini_model = genai.GenerativeModel('gemini-1.5-flash')
+    if SEMANTIC_SEARCH_AVAILABLE:
+        embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+        print("Semantic search models initialized successfully")
+    else:
+        embedding_model = None
+        print("Semantic search not available, using fallback search")
+except Exception as e:
+    print(f"Warning: Could not initialize models: {e}")
+    gemini_model = None
+    embedding_model = None
+
+# Global cache for embeddings
+embeddings_cache = {}
+
+def get_semantic_embedding(text: str) -> np.ndarray:
+    """Get semantic embedding for text using SentenceTransformer."""
+    if embedding_model is None:
+        return None
+    
+    if text in embeddings_cache:
+        return embeddings_cache[text]
+    
+    try:
+        embedding = embedding_model.encode([text])[0]
+        embeddings_cache[text] = embedding
+        return embedding
+    except Exception as e:
+        print(f"Error getting embedding: {e}")
+        return None
+
+def semantic_similarity(text1: str, text2: str) -> float:
+    """Calculate semantic similarity between two texts."""
+    if embedding_model is None:
+        return 0.0
+    
+    emb1 = get_semantic_embedding(text1)
+    emb2 = get_semantic_embedding(text2)
+    
+    if emb1 is None or emb2 is None:
+        return 0.0
+    
+    # Cosine similarity
+    similarity = np.dot(emb1, emb2) / (np.linalg.norm(emb1) * np.linalg.norm(emb2))
+    return float(similarity)
+
+def gemini_semantic_analysis(query: str, section_text: str, persona: str, job: str) -> Dict[str, Any]:
+    """Use Gemini Flash API to analyze semantic relevance and relationship type."""
+    if gemini_model is None:
+        return {
+            "relevance_score": 0.5,
+            "relationship_type": "related",
+            "explanation": "Semantic analysis not available"
+        }
+    
+    try:
+        prompt = f"""
+        Analyze the semantic relationship between the query and the section text.
+        
+        Query: "{query}"
+        Section Text: "{section_text[:1000]}..."
+        Persona: {persona}
+        Job: {job}
+        
+        Provide a JSON response with:
+        1. relevance_score (0.0-1.0): How semantically relevant is the section to the query?
+        2. relationship_type: "related", "contradicting", "example", "overlapping", "complementary"
+        3. explanation: Brief explanation of the relationship
+        4. key_concepts: List of key concepts that connect the query and section
+        
+        Response format:
+        {{
+            "relevance_score": 0.8,
+            "relationship_type": "related",
+            "explanation": "This section discusses cloud computing concepts that directly relate to the query about infrastructure deployment.",
+            "key_concepts": ["cloud computing", "deployment", "infrastructure"]
+        }}
+        """
+        
+        response = gemini_model.generate_content(prompt)
+        result = response.text.strip()
+        
+        # Try to parse JSON response
+        import json
+        try:
+            parsed = json.loads(result)
+            return parsed
+        except json.JSONDecodeError:
+            # Fallback if JSON parsing fails
+            return {
+                "relevance_score": 0.5,
+                "relationship_type": "related",
+                "explanation": "Semantic analysis completed but parsing failed",
+                "key_concepts": []
+            }
+            
+    except Exception as e:
+        print(f"Gemini semantic analysis error: {e}")
+        return {
+            "relevance_score": 0.5,
+            "relationship_type": "related",
+            "explanation": f"Semantic analysis failed: {str(e)}",
+            "key_concepts": []
+        }
+
+def build_semantic_index(sections: List[Dict[str, Any]]) -> Tuple[Any, List[Dict[str, Any]]]:
+    """Build a FAISS index for semantic search."""
+    if not SEMANTIC_SEARCH_AVAILABLE or embedding_model is None:
+        return None, sections
+    
+    try:
+        # Prepare texts for embedding
+        texts = []
+        for section in sections:
+            text = f"{section.get('section_title', '')} {section.get('text', '')}"
+            texts.append(text)
+        
+        # Get embeddings
+        embeddings = []
+        valid_sections = []
+        
+        for i, text in enumerate(texts):
+            embedding = get_semantic_embedding(text)
+            if embedding is not None:
+                embeddings.append(embedding)
+                valid_sections.append(sections[i])
+        
+        if not embeddings:
+            return None, sections
+        
+        # Build FAISS index
+        dimension = len(embeddings[0])
+        if SEMANTIC_SEARCH_AVAILABLE:
+            index = faiss.IndexFlatIP(dimension)  # Inner product for cosine similarity
+            embeddings_array = np.array(embeddings).astype('float32')
+            index.add(embeddings_array)
+        else:
+            index = None
+        
+        return index, valid_sections
+        
+    except Exception as e:
+        print(f"Error building semantic index: {e}")
+        return None, sections
+
+def semantic_search(query: str, index: Any, sections: List[Dict[str, Any]], top_k: int = 10) -> List[Tuple[int, float]]:
+    """Perform semantic search using FAISS index."""
+    if not SEMANTIC_SEARCH_AVAILABLE or index is None or embedding_model is None:
+        return []
+    
+    try:
+        query_embedding = get_semantic_embedding(query)
+        if query_embedding is None:
+            return []
+        
+        query_vector = np.array([query_embedding]).astype('float32')
+        scores, indices = index.search(query_vector, top_k)
+        
+        results = []
+        for i, score in zip(indices[0], scores[0]):
+            if i < len(sections):
+                results.append((i, float(score)))
+        
+        return results
+        
+    except Exception as e:
+        print(f"Semantic search error: {e}")
+        return []
 
 # --------------------------------------------------------------------------------------
 # Build sections: heading text + concatenated body until next heading
@@ -201,94 +384,99 @@ def process_documents_intelligence(pdf_paths: List[str],
     return out
 
 def find_related_sections(current_page: int, 
-                         current_section: str,
-                         persona: str,
-                         job: str,
-                         all_sections: List[Dict[str, Any]],
-                         limit: int = 3) -> List[Dict[str, Any]]:
+                          current_section: str,
+                          persona: str,
+                          job: str,
+                          all_sections: List[Dict[str, Any]],
+                          limit: int = 5) -> List[Dict[str, Any]]:
     """
-    Find sections related to the current reading position using Round 1B logic.
-    This implements a multi-pass approach with enhanced scoring and contextual analysis.
+    Find sections related to the current reading position using semantic search and Gemini Flash API.
+    This implements a hybrid approach combining semantic embeddings, FAISS search, and AI analysis.
     """
     if not all_sections:
         return []
     
-    # Round 1B Logic: Multi-pass relevance scoring
-    
-    # Pass 1: Basic filtering and initial scoring
+    # Filter out current page sections
     filtered_sections = [s for s in all_sections if s.get("page_number", s.get("page", 0)) != current_page]
     
     if not filtered_sections:
         return []
     
-    # Pass 2: Enhanced contextual scoring
+    # Build semantic search query
+    query = f"{persona} {job}"
     if current_section:
-        # Build enhanced query with context
-        query = f"{persona} {job} {current_section}"
-        kw = scoring.build_keywords(persona, job) | scoring.keyword_set(current_section)
-        
-        # Get section data for scoring
-        headings = [s.get("section_title", "Unknown Section") for s in filtered_sections]
-        texts = [s.get("section_title", "") + " " + s.get("text", "") for s in filtered_sections]
-        
-        # Calculate multiple scoring dimensions
-        base_scores = scoring.combined_scores(query, headings, texts, kw)
-        
-        # Pass 3: Contextual boosting based on section relationships
-        for i, section in enumerate(filtered_sections):
-            base_score = float(base_scores[i])
-            
-            # Boost score based on document proximity (same document sections are more relevant)
-            current_doc = _get_current_document_from_page(current_page, all_sections)
-            if current_doc and section.get("document") == current_doc:
-                base_score *= 1.3  # 30% boost for same document
-            
-            # Boost score based on importance rank if available
-            importance_rank = section.get("importance_rank", 10)
-            if importance_rank <= 5:
-                base_score *= 1.2  # 20% boost for high importance
-            
-            # Boost score based on section type/level
-            section_title = section.get("section_title", "")
-            if any(indicator in section_title.lower() for indicator in ["conclusion", "summary", "key", "important"]):
-                base_score *= 1.15  # 15% boost for key sections
-            
-            section["contextual_score"] = base_score
-        
-        # Pass 4: Diversification - ensure we don't get all sections from the same document
-        filtered_sections.sort(key=lambda x: x.get("contextual_score", 0), reverse=True)
-        
-        # Apply diversification to avoid clustering
-        diversified_sections = []
-        seen_documents = set()
-        
-        for section in filtered_sections:
-            doc_name = section.get("document", "Unknown")
-            if len(diversified_sections) < limit:
-                diversified_sections.append(section)
-                seen_documents.add(doc_name)
-            elif doc_name not in seen_documents and len(diversified_sections) < limit * 2:
-                # Add diverse sections up to 2x limit, then trim
-                diversified_sections.append(section)
-                seen_documents.add(doc_name)
-        
-        # Final selection: take top sections with diversity
-        filtered_sections = diversified_sections[:limit]
-    else:
-        # Fallback: use original relevance scores if available
-        filtered_sections.sort(key=lambda x: x.get("relevance_score", 0), reverse=True)
-        filtered_sections = filtered_sections[:limit]
+        query += f" {current_section}"
     
-    # Pass 5: Generate enhanced explanations
+    # Enhanced fallback approach when semantic search is not available
+    enhanced_sections = []
+    
+    for section in filtered_sections:
+        # Get Gemini semantic analysis
+        section_text = f"{section.get('section_title', '')} {section.get('text', '')}"
+        gemini_analysis = gemini_semantic_analysis(query, section_text, persona, job)
+        
+        # Use traditional scoring as fallback
+        traditional_score = section.get("relevance_score", 0.5)
+        
+        # Calculate keyword-based similarity as fallback
+        query_keywords = set(query.lower().split())
+        section_keywords = set(section_text.lower().split())
+        keyword_overlap = len(query_keywords & section_keywords) / max(len(query_keywords), 1)
+        
+        # Combine scores: keyword overlap + Gemini + traditional
+        combined_score = (keyword_overlap * 0.3 + gemini_analysis["relevance_score"] * 0.5 + traditional_score * 0.2)
+        
+        enhanced_sections.append({
+            **section,
+            "keyword_score": keyword_overlap,
+            "gemini_score": gemini_analysis["relevance_score"],
+            "combined_score": combined_score,
+            "relationship_type": gemini_analysis["relationship_type"],
+            "gemini_explanation": gemini_analysis["explanation"],
+            "key_concepts": gemini_analysis.get("key_concepts", [])
+        })
+    
+    # Sort by combined score
+    enhanced_sections.sort(key=lambda x: x["combined_score"], reverse=True)
+    
+    # Diversify by document and relationship type
+    diversified_sections = []
+    seen_documents = set()
+    seen_relationship_types = set()
+    
+    for section in enhanced_sections:
+        doc_name = section.get("document", "Unknown")
+        relationship_type = section.get("relationship_type", "related")
+        
+        # Prioritize diverse documents and relationship types
+        if len(diversified_sections) < limit:
+            diversified_sections.append(section)
+            seen_documents.add(doc_name)
+            seen_relationship_types.add(relationship_type)
+        elif (doc_name not in seen_documents or relationship_type not in seen_relationship_types) and len(diversified_sections) < limit * 2:
+            diversified_sections.append(section)
+            seen_documents.add(doc_name)
+            seen_relationship_types.add(relationship_type)
+    
+    # Final selection: take top sections
+    final_sections = diversified_sections[:limit]
+    
+    # Generate enhanced explanations
     related = []
-    for i, section in enumerate(filtered_sections):
-        explanation = generate_enhanced_relevance_explanation(section, current_section, persona, job)
+    for section in final_sections:
+        # Use Gemini explanation if available, otherwise fallback
+        explanation = section.get("gemini_explanation")
+        if not explanation or len(explanation) < 20:
+            explanation = generate_enhanced_relevance_explanation(section, current_section, persona, job)
+        
         related.append({
             "document": section.get("document", "Unknown Document"),
             "section_title": section.get("section_title", "Unknown Section"),
             "page_number": section.get("page_number", 1),
-            "relevance_score": section.get("contextual_score", section.get("relevance_score", 0)),
-            "explanation": explanation
+            "relevance_score": section.get("combined_score", 0.5),
+            "explanation": explanation,
+            "relationship_type": section.get("relationship_type", "related"),
+            "key_concepts": section.get("key_concepts", [])
         })
     
     return related

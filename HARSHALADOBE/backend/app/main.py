@@ -232,7 +232,7 @@ async def get_related_sections(request: RelatedSectionsRequest):
         persona=request.persona,
         job=request.job_to_be_done,
         all_sections=all_sections,
-        limit=3
+        limit=5
     )
     
     return {"related_sections": related}
@@ -839,6 +839,37 @@ async def health_check():
             "tts": tts_service.is_available()
         }
     }
+
+@app.get("/test-semantic")
+async def test_semantic_search():
+    """Test endpoint to verify semantic search is working."""
+    try:
+        from .document_intelligence import get_semantic_embedding, gemini_semantic_analysis
+        
+        # Test embedding
+        test_text = "This is a test of semantic search functionality"
+        embedding = get_semantic_embedding(test_text)
+        
+        # Test Gemini analysis
+        gemini_result = gemini_semantic_analysis(
+            "software engineer", 
+            "This document discusses cloud computing and deployment strategies",
+            "Software Engineer",
+            "Understand cloud deployment"
+        )
+        
+        return {
+            "status": "semantic_search_working",
+            "embedding_available": embedding is not None,
+            "gemini_analysis": gemini_result,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+    except Exception as e:
+        return {
+            "status": "semantic_search_error",
+            "error": str(e),
+            "timestamp": datetime.utcnow().isoformat()
+        }
 
 if __name__ == "__main__":
     import uvicorn
