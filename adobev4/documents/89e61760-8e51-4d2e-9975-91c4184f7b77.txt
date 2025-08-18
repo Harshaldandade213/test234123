@@ -1,0 +1,263 @@
+Observation Report on
+Good and Bad Designs
+Usability and User-Centered Insights
+Abhishek Dound
+Roll No. 4302 — IT Department
+Savitribai Phule Pune University
+Aug 9, 2025
+UX/UI DESIGN RESEARCH
+User Experience Analysis & Usability StudyIntroduction
+This report presents real-life examples of good and bad
+designs observed in daily environments, analyzing their
+usability and user impact, and suggesting improvements
+through the lens of human-centered design.
+Key Areas Covered:
+Bad Design Examples & Solutions
+Good Design Analysis
+Jugaad Innovations
+Feedback Mechanisms
+Design Constraints
+Abhishek Dound Roll No. 4302 — IT Department August 9, 2025 2 / 34Bad Design
+”Design that frustrates instead of helping”Bad Design 1: Hotel Key Card Slots Without Direction
+Source: Hotel Room Doors
+Problem: Key card slots have no visual indica-
+tion of which way to insert the card (magnetic
+strip up/down, front/back).
+Why It’s Bad: Guests repeatedly try different
+orientations, causing frustration and potential
+card damage.
+Improvement: Add clear directional arrows or a
+visual guide showing correct card orientation.
+Abhishek Dound Roll No. 4302 — IT Department August 9, 2025 4 / 34Bad Design 2: Invisible Glass Doors
+Source: Shopping Malls and Office Build-
+ings
+Problem: Completely transparent glass
+doors without visible handles or markings
+cause people to walk into them.
+Why It’s Bad: Creates safety hazards and
+embarrassing situations for users.
+Improvement: Add frosted strips, visible
+handles, or decorative elements at eye level.
+Abhishek Dound Roll No. 4302 — IT Department August 9, 2025 5 / 34Bad Design 3: Identical Plugs for Different Devices
+Source: Home Entertainment System
+Problem: Multiple identical power adapters
+make it unclear which plug belongs to which
+device.
+Why It’s Bad: Users waste time tracing
+cables and risk unplugging the wrong device.
+Improvement: Use color-coded plugs or
+provide attachable labels.
+Abhishek Dound Roll No. 4302 — IT Department August 9, 2025 6 / 34Bad Design 4: Soap Dispensers That Don’t Work
+Source: Public Restrooms
+Problem: Automatic soap dispensers with poor
+sensors that don’t detect hands or dispense soap
+inconsistently.
+Why It’s Bad: Forces users to wave hands
+frantically, causing hygiene concerns and frus-
+tration.
+Improvement: Use reliable sensors with clear
+activation zones and backup manual operation.
+Abhishek Dound Roll No. 4302 — IT Department August 9, 2025 7 / 34Bad Design 5: Short Charging Cables
+Source: Smartphones / Electronics
+Problem: Charging cables are too short
+to use devices comfortably while plugged in.
+Why It’s Bad: Forces awkward place-
+ments, increasing risk of falls and cable
+damage.
+Improvement: Provide longer cables (1.5–
+2 meters) for safer, more flexible use.
+Abhishek Dound Roll No. 4302 — IT Department August 9, 2025 8 / 34Good Design
+”Design that Makes Life Easy”Good Design 1: Electric Kettle with Water Level Indicator
+Source: Kitchen Appliance
+Feature: Clear window shows exact water
+level with cup markings.
+Why It’s Good: Prevents overfilling and
+saves time and energy.
+Inspiration: Efficient, user-friendly design.
+Abhishek Dound Roll No. 4302 — IT Department August 9, 2025 10 / 34Good Design 2: Contactless Payment Card Tap Zones
+Source: Modern Payment Terminals
+Feature: Clear visual indicators and raised
+surfaces showing exactly where to tap
+contactless cards.
+Why It’s Good: Eliminates guesswork,
+speeds up transactions, and works consis-
+tently across different terminal designs.
+Inspiration: Intuitive physical affordances
+that guide user behavior.
+Abhishek Dound Roll No. 4302 — IT Department August 9, 2025 11 / 34Good Design 3: Public Benches with Armrests
+Source: Parks and Public Spaces
+Feature: Armrests provide support and
+maintain personal space.
+Why It’s Good: Helps elderly or disabled
+users sit and stand safely.
+Inspiration: Inclusive public furniture de-
+sign.
+Abhishek Dound Roll No. 4302 — IT Department August 9, 2025 12 / 34Good Design 4: Shopping Cart with Phone Holder
+Source: Modern Grocery Stores
+Feature: Built-in phone holder on shopping
+cart handle with adjustable angle.
+Why It’s Good: Keeps shopping lists
+accessible while freeing hands for product
+selection.
+Inspiration: Integration of digital and phys-
+ical shopping experience.
+Abhishek Dound Roll No. 4302 — IT Department August 9, 2025 13 / 34Good Design 5: Tactile Paving for Visually Impaired
+Source: Footpaths, Railway Platforms
+Feature: Textured paving indicates hazards
+or directions.
+Why It’s Good: Provides safe navigation
+for visually impaired users.
+Inspiration: Inclusive, accessibility-focused
+urban design.
+Abhishek Dound Roll No. 4302 — IT Department August 9, 2025 14 / 34Conclusion
+Key Takeaway
+Observing good and bad designs in daily life reveals how
+thoughtful design significantly impacts usability. Bad designs
+create confusion, frustration, and safety concerns, while good
+designs enhance accessibility, efficiency, and user satisfaction
+through user-centered thinking and inclusive design principles.
+Bad Designs
+5 Examples
+Analyzed &
+ImprovedGood Designs
+5 Examples
+Best PracticesJugaad
+Solutions
+5 Innovations
+Resourceful FixesUX Principles
+Feedback &
+ConstraintsJugaad
+What do you understand by ”Jugaad”?
+”Jugaad” is a term used in India and South Asia for
+clever, resourceful solutions using minimal resources. It
+means improvising quick, frugal fixes for everyday
+challenges. These fixes are smart and cost-effective, but
+may lack durability.
+Examples:
+Using newspaper as streak-free window cleaner
+Repurposing tennis balls for muscle massage therapy
+Abhishek Dound Roll No. 4302 — IT Department August 9, 2025 16 / 34JUGAAD 1: Cardboard Phone Stand
+Solution:
+Folded cardboard supports your phone
+for hands-free viewing
+Quick DIY using waste material
+Lightweight, easy to recreate anytime
+Abhishek Dound Roll No. 4302 — IT Department August 9, 2025 17 / 34JUGAAD 2: Rubber Band Phone Grip
+Solution:
+Wrap multiple rubber bands around
+your phone case to create a finger grip
+Prevents phone drops and enables
+one-handed operation
+Adjustable and removable based on
+user preference
+Abhishek Dound Roll No. 4302 — IT Department August 9, 2025 18 / 34JUGAAD 3: Bottle Cap as Toothbrush Holder
+Solution:
+A large bottle cap can hold a
+toothbrush upright
+Prevents brushes from touching
+surfaces
+Hygienic and reusable idea
+Abhishek Dound Roll No. 4302 — IT Department August 9, 2025 19 / 34JUGAAD 4: Plastic Bottle Scoop
+Solution:
+Cut a large plastic bottle to make a
+scoop for grains or pet food
+Reduces plastic waste
+Convenient, no-cost household tool
+Abhishek Dound Roll No. 4302 — IT Department August 9, 2025 20 / 34JUGAAD 5: Sock as Dust Cover for Electronics
+Solution:
+Use clean old socks to cover computer
+monitors, TVs, or keyboards when not
+in use
+Protects from dust accumulation
+without spending on custom covers
+Soft material prevents scratches while
+providing complete coverage
+Abhishek Dound Roll No. 4302 — IT Department August 9, 2025 21 / 34Feedback Mechanism
+What do you understand by Feedback Mechanism?
+Feedback means giving or receiving signals about actions
+taken. It helps people know what’s happening and what
+to do next. It helps in:
+Guiding user actions
+Confirming inputs
+Reducing errors
+Improving satisfaction
+Abhishek Dound Roll No. 4302 — IT Department August 9, 2025 22 / 34FEEDBACK 1: Phone Vibration on Silent Mode
+Mechanism:
+A phone vibrates when set to silent
+mode
+Confirms that silent mode is active
+Prevents missed calls due to no
+ringtone
+Abhishek Dound Roll No. 4302 — IT Department August 9, 2025 23 / 34FEEDBACK 2: Car Reverse Beep
+Mechanism:
+Many cars beep when in reverse
+Alerts pedestrians and the driver
+Enhances safety while parking
+Abhishek Dound Roll No. 4302 — IT Department August 9, 2025 24 / 34FEEDBACK 3: Laptop Charging Indicator
+Mechanism:
+Laptops show a charging light when
+plugged in
+Confirms that power is being received
+Prevents surprises when battery runs
+low
+Abhishek Dound Roll No. 4302 — IT Department August 9, 2025 25 / 34FEEDBACK 4: Printer Low Ink Warning
+Mechanism:
+Printers alert when ink is low
+Lets users refill before running out
+Prevents incomplete print jobs
+Abhishek Dound Roll No. 4302 — IT Department August 9, 2025 26 / 34FEEDBACK 5: Password Strength Meter
+Mechanism:
+Many websites show a meter while
+creating passwords
+Indicates strength from weak to strong
+Encourages users to choose secure
+passwords
+Abhishek Dound Roll No. 4302 — IT Department August 9, 2025 27 / 34Constraints
+What do you understand by Constraints?
+Constraints limit how things can be used or done. They
+can be:
+Physical (shape, size, material)
+Logical (rules, order of steps)
+Cultural (norms, colors, symbols)
+Environmental (light, noise, weather)
+Abhishek Dound Roll No. 4302 — IT Department August 9, 2025 28 / 34CONSTRAINT 1: USB Port Shape (Physical)
+Constraint Type: Physical
+USB ports only fit one way
+Prevents damage to connectors
+Makes plugging straightforward
+Abhishek Dound Roll No. 4302 — IT Department August 9, 2025 29 / 34CONSTRAINT 2: App Store Age Verification (Logical)
+Constraint Type: Logical
+Apps with mature content require age
+verification before download
+Creates a logical barrier based on
+user’s declared age
+Protects minors from inappropriate
+content
+Abhishek Dound Roll No. 4302 — IT Department August 9, 2025 30 / 34CONSTRAINT 3: ATM Pin Entry (Logical)
+Constraint Type: Logical
+Must enter PIN before accessing
+account
+Ensures correct order of steps
+Adds security to transactions
+Abhishek Dound Roll No. 4302 — IT Department August 9, 2025 31 / 34CONSTRAINT 4: Movie Theater No Outside Food Policy (Economic)
+Constraint Type: Economic
+Cinemas prohibit outside food and
+drinks to protect concession sales
+Creates economic constraint that
+drives revenue from high-margin
+snacks
+Enforced through bag checks and
+posted signage at entrances
+Abhishek Dound Roll No. 4302 — IT Department August 9, 2025 32 / 34CONSTRAINT 5: Library Quiet Zones (Social/Cultural)
+Constraint Type: Social/Cultural
+Libraries designate specific areas
+where talking and phone calls are
+prohibited
+Creates social constraint that
+maintains study environment for all
+users
+Enforced through signage, social
+norms, and staff intervention
+Abhishek Dound Roll No. 4302 — IT Department August 9, 2025 33 / 34Thank You!
+Abhishek Dound — Roll No. 4302 — IT Department
+Abhishek Dound Roll No. 4302 — IT Department August 9, 2025 34 / 34

@@ -1,0 +1,25 @@
+3.Blue -Green Deployment  
+Definition:  
+● Blue -Green Deployment  is a deployment technique where two identical 
+environments, "Blue" (current) and "Green" (new), are used to minimize 
+downtime and reduce deployment risk.  
+Key Points:  
+1. Process:  
+○ The Blue environment  hosts the current version (V1.0) of the 
+application, while the Green environment  is used for deploying the 
+new version (V2.0).  
+○ Traffic is initially directed to the Blue environment. After successfully 
+deploying V2.0 to Green, traffic is shifted to Green.  
+2. Advantages:  
+○ Zero downtime : Users experience no interruption as the switch 
+between environments is instantaneous.  
+○ Rollback capability : In case of issues in the Green environment, you 
+can quickly switch back to Blue without affecting the users.  
+3. Example Flow:  
+○ Step 1: Blue environment running V1.0, Green is idle.  
+○ Step 2: Deploy V2.0 to Green.  
+○ Step 3: Switch traffic to Green; Blue becomes idle.  
+○ Step 4: If V2.0 fails, switch back to Blue (V1.0).  
+Diagram : 
+● Two identical environments, Blue and Green, represent the system's 
+different stages, ensuring smooth updates without affecting live users.   

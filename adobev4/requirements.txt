@@ -1,0 +1,16 @@
+sentence-transformers
+faiss-cpu
+numpy
+PyPDF2
+python-docx
+torch
+transformers
+huggingface-hub
+boto3
+pydub
+google-generativeai
+fastapi
+uvicorn[standard]
+python-multipart
+requests
+scikit-learn

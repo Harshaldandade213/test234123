@@ -1,0 +1,15 @@
+Spring Security Filter Chain  
+➢ Overview : The filter chain is a sequence of filters that handle 
+requests before they reach the controller. These filters process 
+authentication, authorization, and other security -related tasks.  
+➢ Flow : 
+1. Client sends a request.  
+2. The request passes through various secur ity filters (Filter 1, Filter 
+2, etc.).  
+3. The servlet container processes it, and then it reaches the 
+servlet/controller.  
+ 
+➢ Spring security used multiple filter s like DefaultSecurityFilterChain , 
+WebAs yncManagerIntegrationFilter , SecurityCont extHolderFilter , 
+Logou tFilter , etc. 
+ 
