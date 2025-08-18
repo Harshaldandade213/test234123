@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8001';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 export interface DocumentInfo {
   id: string;
@@ -106,6 +106,20 @@ class ApiService {
     
     if (!response.ok) {
       throw new Error(`Failed to fetch documents: ${response.statusText}`);
+    }
+
+    return response.json();
+  }
+
+  async getDocumentStatus(docId: string): Promise<{
+    status: string;
+    info: DocumentInfo;
+    has_analysis: boolean;
+  }> {
+    const response = await fetch(`${this.baseUrl}/documents/${docId}/status`);
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch document status: ${response.statusText}`);
     }
 
     return response.json();

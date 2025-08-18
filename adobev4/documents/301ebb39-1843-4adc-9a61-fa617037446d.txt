@@ -1,0 +1,28 @@
+2.Cloud Computing  
+Definition:  
+● Cloud computing is the delivery of computing services over the internet 
+("the cloud") to offer faster innovation, flexible resources, and economies of 
+scale.  
+Key Points:  
+1. Traditional Approach:  
+○ Previously, companies needed to maintain their servers, networki ng, 
+storage, and cooling systems on -premise. This required a lot of 
+resources.  
+2. Cloud Model:  
+○ Companies like AWS, GCP, Azure  provide cloud services from 
+remote data centers.  
+○ This removes the burden of managing physical infrastructure.  
+3. Cloud Service Models:  
+○ IaaS (Infrastructure as a Service) : Provides virtualized computing 
+resources (e.g., servers, storage, networking).  
+○ PaaS (Platform as a Service) : Offers hardware and software tools 
+over the internet (e.g., databases, development frameworks).  
+○ SaaS (Software a s a Service) : Delivers applications over the internet 
+(e.g., Gmail, Salesforce).  
+○ FaaS (Function as a Service) : Serverless computing that allows 
+developers to run code without managing servers (e.g., AWS 
+Lambda).  
+Example:  
+● In cloud computing, a developer can  deploy an application without 
+managing the underlying hardware (as in traditional on -premise setups).   
+ 

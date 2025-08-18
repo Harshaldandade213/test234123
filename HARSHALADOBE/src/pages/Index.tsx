@@ -3,6 +3,9 @@ import { LandingPage } from '@/components/LandingPage';
 import { PDFReader, PDFDocument, OutlineItem } from '@/components/PDFReader';
 import { DocumentInfo } from '@/lib/api';
 
+// Get API base URL from environment or default to adobev4 backend
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
 const Index = () => {
   const [showReader, setShowReader] = useState(false);
   const [documents, setDocuments] = useState<PDFDocument[]>([]);
@@ -54,7 +57,7 @@ const Index = () => {
         id: doc.id,
         name: doc.name,
         title: doc.title,
-        url: `http://localhost:8001/pdf/${doc.id}`, // Use HARSHALADOBE backend PDF endpoint
+        url: `${API_BASE_URL}/pdf/${doc.id}`, // Use configured backend PDF endpoint
         outline: buildHierarchicalOutline(doc.outline)
       };
     });

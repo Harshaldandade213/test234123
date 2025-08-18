@@ -73,6 +73,7 @@ interface EnhancedLeftPanelProps {
   onPageNavigate?: (page: number) => void;
   onSectionNavigate?: (page: number, section: string) => void;
   onQuickAction?: (actionId: string) => void;
+  documentAnalysisStatus?: {[key: string]: string};
 }
 
 export function EnhancedLeftPanel({
@@ -85,7 +86,8 @@ export function EnhancedLeftPanel({
   onDocumentChange,
   onPageNavigate,
   onSectionNavigate,
-  onQuickAction
+  onQuickAction,
+  documentAnalysisStatus = {}
 }: EnhancedLeftPanelProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
@@ -476,6 +478,7 @@ export function EnhancedLeftPanel({
                   onDocumentSwitch={(document) => {
                     onDocumentChange?.(document);
                   }}
+                  documentAnalysisStatus={documentAnalysisStatus}
                 />
               </div>
             </CollapsibleContent>

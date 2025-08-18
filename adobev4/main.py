@@ -70,6 +70,45 @@ except Exception as e:
 # Global cache for embeddings
 embeddings_cache = {}
 
+# Initialize documents_db with existing files on startup
+def initialize_documents_db():
+    """Load existing documents from the documents directory into documents_db"""
+    try:
+        documents_dir = "documents"
+        if not os.path.exists(documents_dir):
+            print("📁 Documents directory not found, creating it...")
+            os.makedirs(documents_dir)
+            return
+        
+        print("🔄 Initializing documents_db with existing files...")
+        files = os.listdir(documents_dir)
+        loaded_count = 0
+        
+        for filename in files:
+            if filename.endswith(('.pdf', '.docx', '.txt')):
+                file_path = os.path.join(documents_dir, filename)
+                
+                # Check if this file is already in documents_db
+                file_already_loaded = any(
+                    doc.get("file_path") == file_path for doc in documents_db.values()
+                )
+                
+                if not file_already_loaded:
+                    # Extract metadata and add to database
+                    metadata = get_document_metadata(file_path, filename)
+                    if metadata:
+                        documents_db[metadata["id"]] = metadata
+                        loaded_count += 1
+                        print(f"   ✅ Loaded: {filename}")
+        
+        print(f"📚 Loaded {loaded_count} documents into documents_db")
+        
+    except Exception as e:
+        print(f"❌ Error initializing documents_db: {e}")
+
+# Initialize documents_db on startup
+initialize_documents_db()
+
 # Stopwords for keyword extraction
 STOPWORDS = {
     "a","an","the","of","to","and","in","on","for","with","by","is","are","be",
@@ -976,18 +1015,27 @@ async def track_reading_progress(
 async def get_pdf(doc_id: str):
     """Get PDF file for viewing"""
     try:
+        print(f"🔍 PDF request for doc_id: {doc_id}")
+        print(f"📚 Available documents in documents_db: {list(documents_db.keys())}")
+        
         if doc_id not in documents_db:
+            print(f"❌ Document {doc_id} not found in documents_db")
             raise HTTPException(status_code=404, detail="Document not found")
         
         doc = documents_db[doc_id]
         file_path = doc["file_path"]
+        print(f"📄 File path: {file_path}")
+        print(f"📄 Document info: {doc}")
         
         if not os.path.exists(file_path):
+            print(f"❌ File not found at path: {file_path}")
             raise HTTPException(status_code=404, detail="File not found")
         
+        print(f"✅ Serving PDF file: {file_path}")
         return FileResponse(file_path, media_type="application/pdf")
         
     except Exception as e:
+        print(f"❌ Error serving PDF: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to retrieve PDF: {str(e)}")
 
 @app.get("/audio/{filename}")
@@ -1016,6 +1064,73 @@ async def get_audio(filename: str):
 async def health_check():
     """Health check endpoint"""
     return {"status": "healthy", "timestamp": datetime.now().isoformat()}
+
+# Debug endpoint to check documents_db
+@app.get("/debug/documents")
+async def debug_documents():
+    """Debug endpoint to check documents_db contents"""
+    return {
+        "documents_count": len(documents_db),
+        "document_ids": list(documents_db.keys()),
+        "documents": documents_db
+    }
+
+# Debug endpoint to add a test document
+@app.post("/debug/add-test-document")
+async def add_test_document():
+    """Add a test document to documents_db for testing"""
+    try:
+        # Find a PDF file in the documents directory
+        documents_dir = "documents"
+        pdf_files = [f for f in os.listdir(documents_dir) if f.endswith('.pdf')]
+        
+        if not pdf_files:
+            raise HTTPException(status_code=404, detail="No PDF files found in documents directory")
+        
+        # Use the first PDF file
+        pdf_filename = pdf_files[0]
+        pdf_path = os.path.join(documents_dir, pdf_filename)
+        
+        # Create document metadata
+        metadata = get_document_metadata(pdf_path, pdf_filename)
+        if not metadata:
+            raise HTTPException(status_code=500, detail="Failed to extract metadata from PDF")
+        
+        # Override the ID to match the one from the error
+        test_doc_id = "7b6dd023-3d8f-4574-969e-caa4808e52fa"
+        metadata["id"] = test_doc_id
+        
+        # Add to documents_db
+        documents_db[test_doc_id] = metadata
+        
+        return {
+            "message": "Test document added successfully",
+            "document_id": test_doc_id,
+            "document": metadata
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to add test document: {str(e)}")
+
+# Debug endpoint to reload all documents from directory
+@app.post("/debug/reload-documents")
+async def reload_documents():
+    """Reload all documents from the documents directory into documents_db"""
+    try:
+        # Clear existing documents_db
+        documents_db.clear()
+        
+        # Reinitialize documents_db
+        initialize_documents_db()
+        
+        return {
+            "message": "Documents reloaded successfully",
+            "documents_count": len(documents_db),
+            "document_ids": list(documents_db.keys())
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to reload documents: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn
@@ -1146,7 +1261,7 @@ async def simplify_text_endpoint(request: SimplifyTextRequest):
     """Simplify text difficulty using AI"""
     try:
         text = request.text
-        if not text:
+        if not text or not text.strip():
             raise HTTPException(status_code=400, detail="Text is required")
         
         # Use Gemini to simplify text
@@ -1168,6 +1283,9 @@ async def simplify_text_endpoint(request: SimplifyTextRequest):
             "original": text
         }
         
+    except HTTPException:
+        # Re-raise HTTP exceptions (like 400 for empty text)
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to simplify text: {str(e)}")
 

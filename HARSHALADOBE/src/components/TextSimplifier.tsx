@@ -63,11 +63,11 @@ export function TextSimplifier({ originalText, onSimplifiedText }: TextSimplifie
 
     setIsSimplifying(true);
     try {
-      const simplified = await apiService.simplifyText(originalText, difficultyLevel);
-      setSimplifiedText(simplified);
+      const result = await apiService.simplifyText(originalText);
+      setSimplifiedText(result.text);
       
       if (onSimplifiedText) {
-        onSimplifiedText(simplified);
+        onSimplifiedText(result.text);
       }
       
       toast({

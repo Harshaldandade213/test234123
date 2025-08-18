@@ -1,0 +1,31 @@
+1.What are Microservices?  
+Definition:  
+● Microservices architecture is a design pattern that structures an application 
+as a collection of small, autonomous services, each responsible for a specific 
+business function.  
+Example:  
+● In the example of an e -commerce platform (e.g., Amazon), each service l ike 
+Users, Sellers, Catalog, Payment, Shipping, etc., is an independent 
+microservice.  
+ 
+Key Points:  
+1. Monolithic Architecture Drawbacks:  
+○ Team dependencies.  
+○ Scalability issues (difficult to scale individual components).  
+○ Locked to one technology stack.  
+○ If one part fails, the entire application might crash.  
+ 
+2. Advantages of Microservices:  
+○ Independence : Each service can be developed, deployed, and scaled 
+independently.  
+○ Technology Diversity : Teams can choose the technology best suited 
+for each service.  
+○ Failure Isolat ion: A failure in one service doesn't affect the entire 
+application.  
+3. Communication:  
+○ Microservices typically communicate over HTTP protocol  using 
+APIs.  
+○ Example architecture with an API Gateway  acting as a point of entry 
+to various services.  
+      
+ 

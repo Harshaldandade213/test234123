@@ -36,6 +36,7 @@ export function AdobePDFViewer({
 }: AdobePDFViewerProps) {
   const viewerRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadingStep, setLoadingStep] = useState<string>('Initializing...');
   const [error, setError] = useState<string | null>(null);
   const [isReady, setIsReady] = useState(false);
   const adobeViewRef = useRef<any>(null);
@@ -93,6 +94,18 @@ export function AdobePDFViewer({
 
   // Enhanced navigation to specific sections using multiple approaches
   const goToLocation = async (page: number, section?: string, coordinates?: { x: number; y: number }) => {
+    // Only allow navigation if the document is fully loaded
+    if (!isReady || isLoading) {
+      console.log('Document not ready for navigation yet');
+      toast({
+        title: "Document Loading",
+        description: "Please wait for the document to finish loading before navigating.",
+        variant: "default",
+        duration: 2000
+      });
+      return;
+    }
+
     if (!adobeViewRef.current || !window.AdobeDC) {
       console.warn("Adobe PDF viewer not available, attempting fallback navigation");
       await fallbackNavigation(page, section);
@@ -351,14 +364,23 @@ export function AdobePDFViewer({
 
   // Effect to handle goToSection prop changes
   useEffect(() => {
-    if (goToSection && isReady) {
+    if (goToSection && isReady && !isLoading) {
+      console.log('Document ready, navigating to section:', goToSection);
       goToLocation(goToSection.page, goToSection.section);
+    } else if (goToSection && !isReady) {
+      console.log('Document not ready yet, will navigate when loaded');
     }
-  }, [goToSection, isReady]);
+  }, [goToSection, isReady, isLoading]);
 
   // Handle text selection
   useEffect(() => {
     const handleTextSelection = (e: Event) => {
+      // Only allow text selection if the document is fully loaded
+      if (!isReady || isLoading) {
+        console.log('Document not ready for text selection yet');
+        return;
+      }
+
       const selection = window.getSelection();
       if (selection && selection.toString().trim()) {
         const text = selection.toString();
@@ -384,6 +406,12 @@ export function AdobePDFViewer({
 
     // Handle right-click context menu
     const handleContextMenu = (e: MouseEvent) => {
+      // Only allow context menu if the document is fully loaded
+      if (!isReady || isLoading) {
+        console.log('Document not ready for context menu yet');
+        return;
+      }
+
       e.preventDefault(); // Always prevent default context menu
       
       const selection = window.getSelection();
@@ -553,7 +581,8 @@ export function AdobePDFViewer({
 
   // Apply highlights when they change or page changes
   useEffect(() => {
-    if (highlights.length > 0) {
+    if (highlights.length > 0 && isReady && !isLoading) {
+      console.log('Document ready, applying highlights');
       // Add styles if not already added
       pdfHighlighter.addHighlightStyles();
       
@@ -563,10 +592,24 @@ export function AdobePDFViewer({
       }, 500);
       
       return () => clearTimeout(timeoutId);
+    } else if (highlights.length > 0 && !isReady) {
+      console.log('Document not ready yet, will apply highlights when loaded');
     }
-  }, [highlights, currentHighlightPage, currentPage]);
+  }, [highlights, currentHighlightPage, currentPage, isReady, isLoading]);
 
   const handleHighlight = async (color: 'yellow' | 'green' | 'blue' | 'pink') => {
+    // Only allow highlighting if the document is fully loaded
+    if (!isReady || isLoading) {
+      console.log('Document not ready for highlighting yet');
+      toast({
+        title: "Document Loading",
+        description: "Please wait for the document to finish loading before highlighting.",
+        variant: "default",
+        duration: 2000
+      });
+      return;
+    }
+
     // Store highlight in backend
     try {
       await apiService.addHighlight({
@@ -665,6 +708,18 @@ export function AdobePDFViewer({
   };
 
   const handleSimplify = async () => {
+    // Only allow text simplification if the document is fully loaded
+    if (!isReady || isLoading) {
+      console.log('Document not ready for text simplification yet');
+      toast({
+        title: "Document Loading",
+        description: "Please wait for the document to finish loading before simplifying text.",
+        variant: "default",
+        duration: 2000
+      });
+      return;
+    }
+
     try {
       console.log('Simplifying text:', selectedText);
       const simplified = await apiService.simplifyText(selectedText);
@@ -768,15 +823,30 @@ export function AdobePDFViewer({
         setError(null);
         setIsReady(false);
 
-        // Wait for Adobe DC to be available with timeout
+        setLoadingStep('Starting PDF document loading process...');
+        console.log("🔄 Starting PDF document loading process...");
+        console.log("📄 Document URL:", documentUrl);
+        console.log("📄 Document Name:", documentName);
+
+        // Step 1: Wait for Adobe DC to be available with timeout
+        setLoadingStep('Loading Adobe PDF SDK...');
+        console.log("⏳ Step 1: Waiting for Adobe DC SDK...");
         const adobeTimeout = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error("Adobe SDK timeout")), 10000)
+          setTimeout(() => reject(new Error("Adobe SDK timeout - Please check your internet connection")), 15000)
         );
         
-        const adobeReady = new Promise((resolve) => {
+        const adobeReady = new Promise((resolve, reject) => {
+          let attempts = 0;
+          const maxAttempts = 150; // 15 seconds with 100ms intervals
+          
           const checkAdobeDC = () => {
-            if (window.AdobeDC) {
+            attempts++;
+            if (window.AdobeDC && window.AdobeDC.View) {
+              console.log("✅ Adobe DC SDK loaded successfully");
               resolve(true);
+            } else if (attempts >= maxAttempts) {
+              console.error("❌ Adobe DC SDK failed to load after maximum attempts");
+              reject(new Error("Adobe DC SDK failed to load"));
             } else {
               setTimeout(checkAdobeDC, 100);
             }
@@ -786,7 +856,9 @@ export function AdobePDFViewer({
 
         await Promise.race([adobeReady, adobeTimeout]);
 
-        // Configure Adobe PDF Embed
+        // Step 2: Configure Adobe PDF Embed
+        setLoadingStep('Configuring PDF viewer...');
+        console.log("⏳ Step 2: Configuring Adobe PDF Embed...");
         const adobeDCView = new window.AdobeDC.View({
           clientId: clientId || "a2d7f06cea0c43f09a17bea4c32c9e93",
           divId: viewerRef.current.id,
@@ -803,6 +875,7 @@ export function AdobePDFViewer({
         });
 
         adobeViewRef.current = adobeDCView;
+        console.log("✅ Adobe PDF Embed configured successfully");
 
         // PDF viewing configuration
         const viewerConfig = {
@@ -839,14 +912,18 @@ export function AdobePDFViewer({
           }
         };
 
+        // Step 3: Set up event listeners and load PDF
+        setLoadingStep('Setting up event listeners...');
+        console.log("⏳ Step 3: Setting up event listeners and loading PDF...");
+        
         // Set loading timeout before loading PDF
         const loadingTimeoutId = setTimeout(() => {
-          console.log("PDF loading timeout reached");
+          console.log("⚠️ PDF loading timeout reached - document may still be loading");
           setIsLoading(false);
           setIsReady(true);
-        }, 8000);
+        }, 12000); // Increased timeout to 12 seconds
 
-        // Step 1: Enable PDF Analytics Events
+        // Step 3a: Enable PDF Analytics Events
         const eventOptions = {
           listenOn: [
             "TEXT_COPY",
@@ -860,15 +937,15 @@ export function AdobePDFViewer({
           enablePDFAnalytics: true
         };
 
-        // Step 2: Register the Event Listener
+        // Step 3b: Register the Event Listener
         adobeDCView.registerCallback(
           window.AdobeDC.View.Enum.CallbackType.EVENT_LISTENER,
           function(event: any) {
-            console.log('Adobe PDF Event:', event.type, event.data);
+            console.log('📋 Adobe PDF Event:', event.type, event.data);
             
             if (event.type === "TEXT_COPY") {
               const selectedText = event.data.copiedText;
-              console.log("Selected text:", selectedText);
+              console.log("📝 Text copied:", selectedText);
               
               // Add your logic here to process the selected text for insights
               setSelectedText(selectedText);
@@ -884,10 +961,10 @@ export function AdobePDFViewer({
             }
             
             if (event.type === "TEXT_SELECTION") {
-              console.log("Text selection event:", event.data);
+              console.log("📝 Text selection event:", event.data);
               if (event.data.selection) {
                 const selectedText = event.data.selection.text;
-                console.log("Text selected:", selectedText);
+                console.log("📝 Text selected:", selectedText);
                 
                 setSelectedText(selectedText);
                 if (onTextSelection) {
@@ -910,15 +987,25 @@ export function AdobePDFViewer({
                 }
                 break;
               case "DOCUMENT_OPEN":
+                console.log("📄 PDF document opened - starting to load...");
+                break;
               case "APP_RENDERING_DONE":
-                console.log("PDF document loaded successfully");
+                console.log("✅ PDF document loaded and rendered successfully!");
                 clearTimeout(loadingTimeoutId);
+                setLoadingStep('PDF ready for viewing!');
                 setIsLoading(false);
                 setIsReady(true);
+                
+                // Show success toast
+                toast({
+                  title: "PDF Loaded Successfully",
+                  description: `"${documentName}" is now ready for viewing`,
+                  duration: 3000
+                });
                 break;
               case "DOCUMENT_ERROR":
               case "APP_RENDERING_FAILED":
-                console.error("PDF document error:", event.data);
+                console.error("❌ PDF document error:", event.data);
                 clearTimeout(loadingTimeoutId);
                 setError("Failed to load PDF document");
                 setIsLoading(false);
@@ -929,17 +1016,37 @@ export function AdobePDFViewer({
           eventOptions
         );
 
-        // Load the PDF after setting up callbacks
+        // Step 3c: Load the PDF after setting up callbacks
+        setLoadingStep('Loading PDF document...');
+        console.log("📤 Loading PDF document...");
         await adobeDCView.previewFile({
           content: { location: { url: documentUrl } },
           metaData: { fileName: documentName }
         }, viewerConfig);
+        
+        setLoadingStep('Rendering PDF document...');
+        console.log("✅ PDF loading initiated - waiting for document to render...");
 
       } catch (err) {
         console.error("Error initializing Adobe PDF viewer:", err);
-        setError(`Failed to initialize PDF viewer: ${err.message}`);
+        
+        // Check if it's an Adobe SDK loading issue
+        if (err.message.includes("Adobe SDK") || err.message.includes("timeout")) {
+          setError(`Adobe PDF SDK failed to load. Please check your internet connection and refresh the page. Error: ${err.message}`);
+        } else {
+          setError(`Failed to initialize PDF viewer: ${err.message}`);
+        }
+        
         setIsLoading(false);
         setIsReady(false);
+        
+        // Show a helpful toast message
+        toast({
+          title: "PDF Viewer Error",
+          description: "Adobe PDF viewer failed to load. Please check your internet connection and try refreshing the page.",
+          variant: "destructive",
+          duration: 5000
+        });
       }
     };
 
@@ -960,18 +1067,48 @@ export function AdobePDFViewer({
   // Generate unique ID for the viewer container
   const viewerId = `adobe-pdf-viewer-${Math.random().toString(36).substr(2, 9)}`;
 
+  const handleRetry = () => {
+    setError(null);
+    setIsLoading(true);
+    setIsReady(false);
+    
+    // Force reload the Adobe SDK script
+    const script = document.createElement('script');
+    script.src = 'https://documentservices.adobe.com/view-sdk/viewer.js';
+    script.onload = () => {
+      console.log('Adobe SDK script reloaded, retrying initialization...');
+      // The useEffect will automatically retry when the component re-renders
+    };
+    script.onerror = () => {
+      setError('Failed to load Adobe PDF SDK. Please check your internet connection.');
+      setIsLoading(false);
+    };
+    document.head.appendChild(script);
+  };
+
   if (error) {
     return (
       <div className="h-full flex items-center justify-center bg-surface-elevated rounded-lg border border-border-subtle">
-        <div className="text-center space-y-4">
+        <div className="text-center space-y-4 max-w-md">
           <div className="text-destructive text-lg font-medium">PDF Loading Error</div>
-          <div className="text-text-secondary">{error}</div>
-          <Button 
-            onClick={() => window.location.reload()}
-            variant="outline"
-          >
-            Retry
-          </Button>
+          <div className="text-text-secondary text-sm">{error}</div>
+          <div className="space-y-2">
+            <Button 
+              onClick={handleRetry}
+              variant="outline"
+              className="w-full"
+            >
+              Retry Loading PDF
+            </Button>
+            <Button 
+              onClick={() => window.location.reload()}
+              variant="ghost"
+              size="sm"
+              className="w-full"
+            >
+              Reload Page
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -981,9 +1118,14 @@ export function AdobePDFViewer({
     <div className="relative h-full w-full flex flex-col">
       {isLoading && (
         <div className="absolute inset-0 flex items-center justify-center bg-background/80 z-10">
-          <div className="text-center">
-            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2 text-brand-primary" />
-            <p className="text-sm text-text-secondary">Loading PDF...</p>
+          <div className="text-center max-w-md">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-brand-primary" />
+            <h3 className="text-lg font-medium text-text-primary mb-2">Loading PDF Document</h3>
+            <p className="text-sm text-text-secondary mb-2">{loadingStep}</p>
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div className="bg-brand-primary h-2 rounded-full animate-pulse" style={{ width: '60%' }}></div>
+            </div>
+            <p className="text-xs text-text-secondary mt-2">Please wait while the document loads...</p>
           </div>
         </div>
       )}
@@ -1002,8 +1144,15 @@ export function AdobePDFViewer({
       <div 
         id="adobe-dc-view" 
         ref={viewerRef}
-        className="flex-1 w-full h-full"
+        className={`flex-1 w-full h-full ${isReady ? 'document-ready' : 'document-loading'}`}
       />
+      
+      {/* Document ready indicator */}
+      {isReady && (
+        <div className="absolute top-4 right-4 bg-green-500 text-white px-3 py-1 rounded-full text-xs font-medium shadow-lg">
+          ✓ Document Ready
+        </div>
+      )}
 
       {/* Text Selection Context Menu */}
       <TextSelectionMenu

@@ -110,39 +110,72 @@ async def upload_pdfs(
             content = await file.read()
             await f.write(content)
         
-        # Analyze PDF
-        try:
-            analysis = analyze_pdf(file_path)
-            
-            doc_info = DocumentInfo(
-                id=doc_id,
-                name=file.filename,
-                title=analysis["title"] or file.filename,
-                outline=analysis["outline"],
-                language=analysis.get("language", "unknown"),
-                upload_timestamp=datetime.utcnow().isoformat(),
-                persona=persona,
-                job_to_be_done=job_to_be_done,
-                tags=[]
-            )
-            
-            # Store document info and analysis
-            documents_store[doc_id] = {
-                "info": doc_info.dict(),
-                "file_path": file_path,
-                "analysis": analysis
-            }
-            
-            uploaded_docs.append(doc_info)
-            
-        except Exception as e:
-            print(f"Error analyzing {file.filename}: {e}")
-            # Clean up failed upload
-            if os.path.exists(file_path):
-                os.remove(file_path)
-            continue
+        # Create basic document info immediately for display
+        doc_info = DocumentInfo(
+            id=doc_id,
+            name=file.filename,
+            title=file.filename,  # Will be updated after analysis
+            outline=[],  # Will be populated after analysis
+            language="unknown",  # Will be updated after analysis
+            upload_timestamp=datetime.utcnow().isoformat(),
+            persona=persona,
+            job_to_be_done=job_to_be_done,
+            tags=[]
+        )
+        
+        # Store basic document info immediately
+        documents_store[doc_id] = {
+            "info": doc_info.dict(),
+            "file_path": file_path,
+            "analysis": None,  # Will be populated after analysis
+            "analysis_status": "pending"
+        }
+        
+        uploaded_docs.append(doc_info)
+        
+        # Start background analysis
+        asyncio.create_task(analyze_document_background(doc_id, file_path, persona, job_to_be_done))
     
     return uploaded_docs
+
+async def analyze_document_background(doc_id: str, file_path: str, persona: str, job_to_be_done: str):
+    """Analyze document in background and update store."""
+    try:
+        print(f"Starting background analysis for document {doc_id}")
+        
+        # Update status to analyzing
+        if doc_id in documents_store:
+            documents_store[doc_id]["analysis_status"] = "analyzing"
+        
+        # Analyze PDF
+        analysis = analyze_pdf(file_path)
+        
+        # Update document info with analysis results
+        updated_info = DocumentInfo(
+            id=doc_id,
+            name=documents_store[doc_id]["info"]["name"],
+            title=analysis["title"] or documents_store[doc_id]["info"]["name"],
+            outline=analysis["outline"],
+            language=analysis.get("language", "unknown"),
+            upload_timestamp=documents_store[doc_id]["info"]["upload_timestamp"],
+            persona=persona,
+            job_to_be_done=job_to_be_done,
+            tags=[]
+        )
+        
+        # Update store with analysis results
+        documents_store[doc_id].update({
+            "info": updated_info.dict(),
+            "analysis": analysis,
+            "analysis_status": "completed"
+        })
+        
+        print(f"Background analysis completed for document {doc_id}")
+        
+    except Exception as e:
+        print(f"Error in background analysis for {doc_id}: {e}")
+        if doc_id in documents_store:
+            documents_store[doc_id]["analysis_status"] = "failed"
 
 @app.get("/documents", response_model=List[DocumentInfo])
 async def get_documents():
@@ -155,6 +188,19 @@ async def get_document(doc_id: str):
     if doc_id not in documents_store:
         raise HTTPException(status_code=404, detail="Document not found")
     return documents_store[doc_id]["info"]
+
+@app.get("/documents/{doc_id}/status")
+async def get_document_status(doc_id: str):
+    """Get document analysis status and updated info."""
+    if doc_id not in documents_store:
+        raise HTTPException(status_code=404, detail="Document not found")
+    
+    doc_data = documents_store[doc_id]
+    return {
+        "status": doc_data.get("analysis_status", "unknown"),
+        "info": doc_data["info"],
+        "has_analysis": doc_data.get("analysis") is not None
+    }
 
 @app.delete("/documents/{doc_id}")
 async def delete_document(doc_id: str):

@@ -22,6 +22,7 @@ interface DocumentOutlineProps {
   currentPage: number;
   onItemClick: (item: OutlineItem) => void;
   onDocumentSwitch?: (document: PDFDocument) => void;
+  documentAnalysisStatus?: {[key: string]: string};
 }
 
 export function DocumentOutline({ 
@@ -30,7 +31,8 @@ export function DocumentOutline({
   currentDocument,
   currentPage, 
   onItemClick,
-  onDocumentSwitch 
+  onDocumentSwitch,
+  documentAnalysisStatus = {}
 }: DocumentOutlineProps) {
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set(['root']));
   const [expandedDocuments, setExpandedDocuments] = useState<Set<string>>(new Set(documents?.map(d => d.id) || []));
@@ -266,6 +268,16 @@ export function DocumentOutline({
                 {isCurrentDoc && (
                   <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800 border-blue-200">
                     Current
+                  </Badge>
+                )}
+                {documentAnalysisStatus[document.id] === 'analyzing' && (
+                  <Badge variant="secondary" className="text-xs bg-yellow-100 text-yellow-800 border-yellow-200 animate-pulse">
+                    Analyzing...
+                  </Badge>
+                )}
+                {documentAnalysisStatus[document.id] === 'pending' && (
+                  <Badge variant="secondary" className="text-xs bg-gray-100 text-gray-800 border-gray-200">
+                    Queued
                   </Badge>
                 )}
                 <Badge variant="outline" className="text-xs">

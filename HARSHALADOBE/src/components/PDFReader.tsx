@@ -157,6 +157,7 @@ export function PDFReader({ documents, persona, jobToBeDone, onBack }: PDFReader
   const [readingStartTime, setReadingStartTime] = useState<number>(Date.now());
   const [isActivelyReading, setIsActivelyReading] = useState(true);
   const [totalPages, setTotalPages] = useState(30); // Will be updated from PDF
+  const [documentAnalysisStatus, setDocumentAnalysisStatus] = useState<{[key: string]: string}>({});
   const [currentLanguage, setCurrentLanguage] = useState('en');
   const [insightMode, setInsightMode] = useState(false);
   const [goToDialogOpen, setGoToDialogOpen] = useState(false);
@@ -195,6 +196,11 @@ export function PDFReader({ documents, persona, jobToBeDone, onBack }: PDFReader
   useEffect(() => {
     if (documents && documents.length > 0 && !currentDocument) {
       setCurrentDocument(documents[0]);
+      
+      // Check analysis status for all documents
+      documents.forEach(doc => {
+        checkDocumentAnalysisStatus(doc.id);
+      });
       
       // Automatically generate intelligence highlights if persona and job are set
       if (persona && jobToBeDone) {
@@ -235,12 +241,66 @@ export function PDFReader({ documents, persona, jobToBeDone, onBack }: PDFReader
     }
   }, [documents, currentDocument, persona, jobToBeDone]);
 
+  // Check document analysis status periodically
+  const checkDocumentAnalysisStatus = async (docId: string) => {
+    try {
+      const status = await apiService.getDocumentStatus(docId);
+      setDocumentAnalysisStatus(prev => ({
+        ...prev,
+        [docId]: status.status
+      }));
+      
+      // If analysis is complete, update the document
+      if (status.status === 'completed' && status.has_analysis) {
+        // If this is the current document, update it
+        if (currentDocument?.id === docId) {
+          // Convert API outline format to component format
+          const convertedOutline = status.info.outline.map((item: any, index: number) => ({
+            id: `${docId}-${index}`,
+            title: item.text,
+            level: parseInt(item.level.replace('H', '')),
+            page: item.page,
+            children: []
+          }));
+          
+          setCurrentDocument(prev => prev ? {
+            ...prev,
+            title: status.info.title,
+            outline: convertedOutline
+          } : null);
+        }
+        
+        // Show success toast
+        toast({
+          title: "Document Analysis Complete",
+          description: `Analysis completed for ${status.info.name}`,
+        });
+      }
+    } catch (error) {
+      console.error('Error checking document status:', error);
+    }
+  };
+
   // Load related sections when page or document changes
   useEffect(() => {
     if (currentDocument && persona && jobToBeDone) {
       loadRelatedSections();
     }
   }, [currentDocument, currentPage, persona, jobToBeDone]);
+
+  // Periodically check document analysis status
+  useEffect(() => {
+    if (!currentDocument) return;
+    
+    const interval = setInterval(() => {
+      const status = documentAnalysisStatus[currentDocument.id];
+      if (status === 'pending' || status === 'analyzing') {
+        checkDocumentAnalysisStatus(currentDocument.id);
+      }
+    }, 2000); // Check every 2 seconds
+    
+    return () => clearInterval(interval);
+  }, [currentDocument, documentAnalysisStatus]);
 
   const loadRelatedSections = async () => {
     if (!currentDocument || !persona || !jobToBeDone) return;
@@ -842,6 +902,7 @@ export function PDFReader({ documents, persona, jobToBeDone, onBack }: PDFReader
                       break;
                   }
                 }}
+                documentAnalysisStatus={documentAnalysisStatus}
               />
             </div>
             
