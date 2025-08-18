@@ -85,6 +85,50 @@ reading_progress_db = {}
 highlights_db = {}
 
 # Helper functions
+async def sync_document_to_adobev4(doc_metadata: Dict[str, Any]):
+    """Sync a document to adobev4 backend for semantic search"""
+    try:
+        # Read the document content
+        file_path = doc_metadata.get('file_path', '')
+        if not os.path.exists(file_path):
+            print(f"⚠️ Document file not found: {file_path}")
+            return
+        
+        # Extract content based on file type
+        if file_path.endswith('.pdf'):
+            content = parse_pdf(file_path)
+        elif file_path.endswith('.docx'):
+            content = parse_docx(file_path)
+        elif file_path.endswith('.txt'):
+            content = parse_txt(file_path)
+        else:
+            print(f"⚠️ Unsupported file type: {file_path}")
+            return
+        
+        # Prepare sync request
+        sync_data = {
+            "document_id": doc_metadata["id"],
+            "content": content,
+            "filename": doc_metadata["name"]
+        }
+        
+        # Send to adobev4 backend
+        import httpx
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                "http://localhost:8000/sync-document",
+                json=sync_data,
+                timeout=30.0
+            )
+            
+            if response.status_code == 200:
+                print(f"✅ Document {doc_metadata['name']} synced to adobev4 successfully")
+            else:
+                print(f"❌ Failed to sync document {doc_metadata['name']}: {response.status_code}")
+                
+    except Exception as e:
+        print(f"❌ Error syncing document to adobev4: {e}")
+
 def get_document_metadata(file_path: str, filename: str) -> Dict[str, Any]:
     """Extract metadata from document using app.py functions"""
     try:
@@ -171,6 +215,13 @@ async def upload_pdfs(
         
         # Rebuild index with new documents using app.py logic
         build_or_update_index()
+        
+        # Sync documents to adobev4 backend for semantic search
+        for doc in uploaded_docs:
+            try:
+                await sync_document_to_adobev4(doc)
+            except Exception as e:
+                print(f"⚠️ Failed to sync document {doc['id']} to adobev4: {e}")
         
         return uploaded_docs
         

@@ -201,10 +201,15 @@ class IntegratedApiService {
   }
 
   // Analyze query using adobev4's analyze-query endpoint
-  async analyzeQuery(query: string): Promise<DetailedAnalysisResult> {
+  async analyzeQuery(query: string, documentIds?: string[]): Promise<DetailedAnalysisResult> {
     try {
       const formData = new FormData();
       formData.append('query', query);
+      
+      // Add document IDs if provided
+      if (documentIds && documentIds.length > 0) {
+        formData.append('document_ids', JSON.stringify(documentIds));
+      }
 
       const analysisResponse = await fetch(`${this.adobev4Url}/analyze-query`, {
         method: 'POST',

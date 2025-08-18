@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Brain, FileText, Quote, Loader2, ExternalLink, AlertCircle, CheckCircle, XCircle, Info, BarChart3 } from 'lucide-react';
+import { Brain, FileText, Quote, Loader2, ExternalLink, AlertCircle, CheckCircle, XCircle, Info, BarChart3, Link2, Tag } from 'lucide-react';
 import { apiService, RelatedSection } from '@/lib/api';
 import { integratedApiService, DetailedAnalysisResult, PassageAnalysis } from '@/lib/integrated-api';
 import { Button } from '@/components/ui/button';
@@ -38,6 +38,7 @@ export function InsightsPanel({
   const [error, setError] = useState<string | null>(null);
   const [persona, setPersona] = useState(propPersona || '');
   const [jobToBeDone, setJobToBeDone] = useState(propJobToBeDone || '');
+  const [activeFilter, setActiveFilter] = useState<'all' | 'relevant' | 'related'>('all');
 
   // Fetch related sections and detailed analysis when text is selected
   useEffect(() => {
@@ -174,7 +175,8 @@ export function InsightsPanel({
     setError(null);
 
     try {
-      const analysis = await integratedApiService.analyzeQuery(customQuery.trim());
+      // Pass document IDs if available
+      const analysis = await integratedApiService.analyzeQuery(customQuery.trim(), documentIds);
       setQueryAnalysis(analysis);
     } catch (err) {
       console.error('Error analyzing custom query:', err);
@@ -356,43 +358,139 @@ export function InsightsPanel({
 
                  {/* Passage Analysis */}
                  <div>
-                   <h4 className="font-semibold text-sm mb-3">Passage Analysis:</h4>
-                   <div className="space-y-3">
-                     {detailedAnalysis.analysis.map((passage, index) => (
-                       <div key={index} className="border border-border rounded-lg p-3 bg-muted/30">
-                         <div className="flex items-start justify-between mb-2">
-                           <div className="flex items-center gap-2">
-                             <span className="text-sm font-medium text-foreground">
-                               Passage {index + 1}
-                             </span>
-                             {passage.source && (
-                               <span className="text-xs text-muted-foreground">
-                                 ({passage.source})
-                               </span>
-                             )}
-                           </div>
-                           {getCategoryBadge(passage.category)}
-                         </div>
-                         
-                         <div className="mb-2">
-                           <h5 className="font-medium text-sm text-foreground mb-1">Justification:</h5>
-                           <p className="text-xs text-muted-foreground leading-relaxed">
-                             {passage.justification}
-                           </p>
-                         </div>
+                   <div className="flex items-center justify-between mb-3">
+                     <h4 className="font-semibold text-sm">Relevant Passages:</h4>
+                     <div className="flex items-center gap-2">
+                       <Badge variant="outline" className="text-xs">
+                         {detailedAnalysis.analysis.filter(p => p.category === 'Key Insight' || p.category === 'Direct Answer').length} Highly Relevant
+                       </Badge>
+                       <Badge variant="outline" className="text-xs">
+                         {detailedAnalysis.analysis.length} Total
+                       </Badge>
+                     </div>
+                   </div>
+                   
+                   {/* Filter Tabs */}
+                   <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
+                     <Button
+                       variant={activeFilter === 'all' ? 'default' : 'outline'}
+                       size="sm"
+                       onClick={() => setActiveFilter('all')}
+                       className="text-xs whitespace-nowrap"
+                     >
+                       All Passages ({detailedAnalysis.analysis.length})
+                     </Button>
+                     <Button
+                       variant={activeFilter === 'relevant' ? 'default' : 'outline'}
+                       size="sm"
+                       onClick={() => setActiveFilter('relevant')}
+                       className="text-xs whitespace-nowrap"
+                     >
+                       Highly Relevant ({detailedAnalysis.analysis.filter(p => p.category === 'Key Insight' || p.category === 'Direct Answer').length})
+                     </Button>
+                     <Button
+                       variant={activeFilter === 'related' ? 'default' : 'outline'}
+                       size="sm"
+                       onClick={() => setActiveFilter('related')}
+                       className="text-xs whitespace-nowrap"
+                     >
+                       Related ({detailedAnalysis.analysis.filter(p => p.category === 'Related Point').length})
+                     </Button>
+                   </div>
 
-                         {passage.quote && (
-                           <div>
-                             <h5 className="font-medium text-sm text-foreground mb-1">Quote:</h5>
-                             <div className="bg-background/80 p-2 rounded border-l-4 border-primary/50">
-                               <p className="text-xs text-foreground italic">
-                                 "{passage.quote}"
-                               </p>
-                             </div>
-                           </div>
-                         )}
-                       </div>
-                     ))}
+                   {/* Scrollable Passage Grid */}
+                   <div className="max-h-96 overflow-y-auto pr-2 border border-gray-200/50 rounded-lg p-2 hover:border-gray-300/70 transition-colors bg-gradient-to-br from-gray-50/50 to-gray-100/30" style={{ scrollbarWidth: 'thin', scrollbarColor: '#9ca3af #f3f4f6' }}>
+                     <div className="flex flex-col gap-4 w-full">
+                       {detailedAnalysis.analysis
+                         .filter(passage => {
+                           if (activeFilter === 'relevant') {
+                             return passage.category === 'Key Insight' || passage.category === 'Direct Answer';
+                           } else if (activeFilter === 'related') {
+                             return passage.category === 'Related Point';
+                           }
+                           return true;
+                         })
+                         .map((passage, index) => (
+                           <Card key={index} className="w-full bg-gradient-to-br from-background to-muted/20 border-2 border-primary/20 hover:border-primary/40 transition-all duration-200 shadow-lg hover:shadow-xl">
+                             <CardHeader className="pb-3">
+                               <div className="flex items-center justify-between">
+                                 <div className="flex items-center gap-2">
+                                   <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                                     passage.category === 'Key Insight' || passage.category === 'Direct Answer' 
+                                       ? 'bg-green-500/20' 
+                                       : 'bg-primary/20'
+                                   }`}>
+                                     <span className={`text-sm font-bold ${
+                                       passage.category === 'Key Insight' || passage.category === 'Direct Answer' 
+                                         ? 'text-green-600' 
+                                         : 'text-primary'
+                                     }`}>
+                                       {index + 1}
+                                     </span>
+                                   </div>
+                                   <div>
+                                     <h5 className="font-semibold text-sm text-foreground">Passage {index + 1}</h5>
+                                     {passage.source && (
+                                       <p className="text-xs text-muted-foreground truncate max-w-32">
+                                         {passage.source.replace('.pdf', '').replace('.docx', '').replace('.txt', '')}
+                                       </p>
+                                     )}
+                                   </div>
+                                 </div>
+                                 <div className="flex flex-col items-end gap-1">
+                                   {getCategoryBadge(passage.category)}
+                                 </div>
+                               </div>
+                             </CardHeader>
+                             
+                             <CardContent className="space-y-3">
+                               {/* Justification Box - Enhanced */}
+                               <div className="bg-muted/30 rounded-lg p-3 border-l-4 border-blue-500/50 w-full">
+                                 <h6 className="font-medium text-xs text-blue-600 mb-1 flex items-center gap-1">
+                                   <Info className="h-3 w-3" />
+                                   Analysis
+                                 </h6>
+                                 <div className="max-h-24 overflow-y-auto w-full relative border border-blue-200/50 rounded-md p-2 hover:border-blue-300/70 transition-colors" style={{ scrollbarWidth: 'thin', scrollbarColor: '#60a5fa #dbeafe' }}>
+                                   <p className="text-xs text-foreground leading-relaxed">
+                                     {passage.justification}
+                                   </p>
+                                   <div className="absolute bottom-0 left-0 right-0 h-4 bg-gradient-to-t from-muted/30 to-transparent pointer-events-none"></div>
+                                 </div>
+                               </div>
+
+                               {/* Quote Box - Enhanced */}
+                               {passage.quote && (
+                                 <div className="bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-950/20 dark:to-blue-950/20 rounded-lg p-3 border-l-4 border-green-500/50 w-full">
+                                   <h6 className="font-medium text-xs text-green-600 mb-1 flex items-center gap-1">
+                                     <Quote className="h-3 w-3" />
+                                     Key Quote
+                                   </h6>
+                                   <div className="bg-background/80 p-2 rounded border max-h-20 overflow-y-auto w-full border-green-200/50 hover:border-green-300/70 transition-colors" style={{ scrollbarWidth: 'thin', scrollbarColor: '#4ade80 #dcfce7' }}>
+                                     <p className="text-xs text-foreground italic leading-relaxed">
+                                       "{passage.quote}"
+                                     </p>
+                                   </div>
+                                 </div>
+                               )}
+
+                               {/* Preview Box - Enhanced */}
+                               {passage.passage_preview && (
+                                 <div className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 rounded-lg p-3 border-l-4 border-purple-500/50 w-full">
+                                   <h6 className="font-medium text-xs text-purple-600 mb-1 flex items-center gap-1">
+                                     <FileText className="h-3 w-3" />
+                                     Content Preview
+                                   </h6>
+                                   <div className="max-h-16 overflow-y-auto w-full border border-purple-200/50 rounded-md p-2 hover:border-purple-300/70 transition-colors" style={{ scrollbarWidth: 'thin', scrollbarColor: '#a855f7 #f3e8ff' }}>
+                                     <p className="text-xs text-foreground leading-relaxed">
+                                       {passage.passage_preview}
+                                     </p>
+                                   </div>
+                                 </div>
+                               )}
+                             </CardContent>
+                           </Card>
+                         ))}
+                     </div>
                    </div>
                  </div>
                </CardContent>
@@ -424,51 +522,101 @@ export function InsightsPanel({
                  {queryAnalysis.summary && (
                    <div>
                      <h4 className="font-semibold text-sm mb-2">Summary:</h4>
-                     <p className="text-sm text-foreground bg-muted/50 p-3 rounded-lg">
-                       {queryAnalysis.summary}
-                     </p>
+                     <div className="bg-muted/50 p-3 rounded-lg border border-gray-200/50 hover:border-gray-300/70 transition-colors" style={{ scrollbarWidth: 'thin', scrollbarColor: '#9ca3af #f3f4f6' }}>
+                       <p className="text-sm text-foreground leading-relaxed max-h-32 overflow-y-auto">
+                         {queryAnalysis.summary}
+                       </p>
+                     </div>
                    </div>
                  )}
 
                  {/* Passage Analysis */}
                  <div>
                    <h4 className="font-semibold text-sm mb-3">Passage Analysis:</h4>
-                   <div className="space-y-3">
-                     {queryAnalysis.analysis.map((passage, index) => (
-                       <div key={index} className="border border-border rounded-lg p-3 bg-muted/30">
-                         <div className="flex items-start justify-between mb-2">
-                           <div className="flex items-center gap-2">
-                             <span className="text-sm font-medium text-foreground">
-                               Passage {index + 1}
-                             </span>
-                             {passage.source && (
-                               <span className="text-xs text-muted-foreground">
-                                 ({passage.source})
-                               </span>
-                             )}
-                           </div>
-                           {getCategoryBadge(passage.category)}
-                         </div>
-                         
-                         <div className="mb-2">
-                           <h5 className="font-medium text-sm text-foreground mb-1">Justification:</h5>
-                           <p className="text-xs text-muted-foreground leading-relaxed">
-                             {passage.justification}
-                           </p>
-                         </div>
-
-                         {passage.quote && (
-                           <div>
-                             <h5 className="font-medium text-sm text-foreground mb-1">Quote:</h5>
-                             <div className="bg-background/80 p-2 rounded border-l-4 border-primary/50">
-                               <p className="text-xs text-foreground italic">
-                                 "{passage.quote}"
-                               </p>
+                   {/* Scrollable Passage Grid */}
+                   <div className="max-h-96 overflow-y-auto pr-2 border border-gray-200/50 rounded-lg p-2 hover:border-gray-300/70 transition-colors bg-gradient-to-br from-gray-50/50 to-gray-100/30" style={{ scrollbarWidth: 'thin', scrollbarColor: '#9ca3af #f3f4f6' }}>
+                     <div className="flex flex-col gap-4 w-full">
+                       {queryAnalysis.analysis.map((passage, index) => (
+                         <Card key={index} className="w-full bg-gradient-to-br from-background to-muted/20 border-2 border-primary/20 hover:border-primary/40 transition-all duration-200 shadow-lg hover:shadow-xl">
+                           <CardHeader className="pb-3">
+                             <div className="flex items-center justify-between">
+                               <div className="flex items-center gap-2">
+                                 <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                                   passage.category === 'Key Insight' || passage.category === 'Direct Answer' 
+                                     ? 'bg-green-500/20' 
+                                     : 'bg-primary/20'
+                                 }`}>
+                                   <span className={`text-sm font-bold ${
+                                     passage.category === 'Key Insight' || passage.category === 'Direct Answer' 
+                                       ? 'text-green-600' 
+                                       : 'text-primary'
+                                   }`}>
+                                     {index + 1}
+                                   </span>
+                                 </div>
+                                 <div>
+                                   <h5 className="font-semibold text-sm text-foreground">Passage {index + 1}</h5>
+                                   {passage.source && (
+                                     <p className="text-xs text-muted-foreground truncate max-w-32">
+                                       {passage.source.replace('.pdf', '').replace('.docx', '').replace('.txt', '')}
+                                     </p>
+                                   )}
+                                 </div>
+                               </div>
+                               <div className="flex flex-col items-end gap-1">
+                                 {getCategoryBadge(passage.category)}
+                               </div>
                              </div>
-                           </div>
-                         )}
-                       </div>
-                     ))}
+                           </CardHeader>
+                           
+                           <CardContent className="space-y-3">
+                             {/* Justification Box - Enhanced */}
+                             <div className="bg-muted/30 rounded-lg p-3 border-l-4 border-blue-500/50 w-full relative border border-blue-200/50 rounded-md p-2 hover:border-blue-300/70 transition-colors" style={{ scrollbarWidth: 'thin', scrollbarColor: '#60a5fa #dbeafe' }}>
+                               <h6 className="font-medium text-xs text-blue-600 mb-1 flex items-center gap-1">
+                                 <Info className="h-3 w-3" />
+                                 Analysis
+                               </h6>
+                               <div className="max-h-24 overflow-y-auto w-full relative border border-blue-200/50 rounded-md p-2 hover:border-blue-300/70 transition-colors" style={{ scrollbarWidth: 'thin', scrollbarColor: '#60a5fa #dbeafe' }}>
+                                 <p className="text-xs text-foreground leading-relaxed">
+                                   {passage.justification}
+                                 </p>
+                                 <div className="absolute bottom-0 left-0 right-0 h-4 bg-gradient-to-t from-muted/30 to-transparent pointer-events-none"></div>
+                               </div>
+                             </div>
+
+                             {/* Quote Box - Enhanced */}
+                             {passage.quote && (
+                               <div className="bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-950/20 dark:to-blue-950/20 rounded-lg p-3 border-l-4 border-green-500/50 w-full">
+                                 <h6 className="font-medium text-xs text-green-600 mb-1 flex items-center gap-1">
+                                   <Quote className="h-3 w-3" />
+                                   Key Quote
+                                 </h6>
+                                 <div className="bg-background/80 p-2 rounded border max-h-20 overflow-y-auto w-full border-green-200/50 hover:border-green-300/70 transition-colors" style={{ scrollbarWidth: 'thin', scrollbarColor: '#4ade80 #dcfce7' }}>
+                                   <p className="text-xs text-foreground italic leading-relaxed">
+                                     "{passage.quote}"
+                                   </p>
+                                 </div>
+                               </div>
+                             )}
+
+                             {/* Preview Box - Enhanced */}
+                             {passage.passage_preview && (
+                               <div className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 rounded-lg p-3 border-l-4 border-purple-500/50 w-full">
+                                 <h6 className="font-medium text-xs text-purple-600 mb-1 flex items-center gap-1">
+                                   <FileText className="h-3 w-3" />
+                                   Content Preview
+                                 </h6>
+                                 <div className="max-h-16 overflow-y-auto w-full border border-purple-200/50 rounded-md p-2 hover:border-purple-300/70 transition-colors" style={{ scrollbarWidth: 'thin', scrollbarColor: '#a855f7 #f3e8ff' }}>
+                                   <p className="text-xs text-foreground leading-relaxed">
+                                     {passage.passage_preview}
+                                   </p>
+                                 </div>
+                               </div>
+                             )}
+                           </CardContent>
+                         </Card>
+                       ))}
+                     </div>
                    </div>
                  </div>
                </CardContent>
@@ -516,9 +664,9 @@ export function InsightsPanel({
                 <div className="text-center space-y-2">
                   <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
                   <p className="text-sm text-muted-foreground">Finding relevant passages...</p>
-                          </div>
-                        </CardContent>
-                      </Card>
+                </div>
+              </CardContent>
+            </Card>
           )}
 
           {/* Error State */}
@@ -527,86 +675,163 @@ export function InsightsPanel({
               <CardContent className="flex items-center gap-2 py-4 text-destructive">
                 <AlertCircle className="h-4 w-4" />
                 <p className="text-sm">{error}</p>
-                              </CardContent>
-                            </Card>
+              </CardContent>
+            </Card>
           )}
 
           {/* Related Sections */}
           {relatedSections.length > 0 && (
-                                <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <FileText className="h-5 w-5 text-primary" />
-                <h4 className="font-semibold text-lg">Top 5 Relevant Passages</h4>
-                <Badge variant="outline">{relatedSections.length} found</Badge>
-                                    </div>
-                                    
-              <div className="space-y-3">
-                {relatedSections.map((section, index) => {
-                  const insightType = getInsightType(section.relevance_score, section.explanation);
-                  return (
-                    <Card key={index} className="bg-background/80 hover:bg-background/90 transition-colors">
-                              <CardContent className="p-4">
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            {getInsightIcon(insightType)}
-                            <span className="text-sm font-medium text-foreground">
-                              {section.document}
-                            </span>
-                            <span className="text-xs text-muted-foreground">
-                              Page {section.page_number}
-                            </span>
-                                    </div>
-                          <div className="flex items-center gap-2">
-                            {getInsightBadge(insightType)}
-                            <Badge variant="outline" className="text-xs">
-                              {Math.round(section.relevance_score * 100)}% relevant
-                                        </Badge>
-                                      </div>
-                      </div>
-
-                        <div className="mb-3">
-                          <h5 className="font-medium text-sm text-foreground mb-1">
-                            {section.section_title}
-                          </h5>
-                          <p className="text-xs text-muted-foreground leading-relaxed">
-                            {section.explanation}
-                          </p>
-                          </div>
-
-                                <div className="flex items-center gap-2">
-                                  <Button
-                                    size="sm"
-                            variant="outline"
-                            onClick={() => onPageNavigate?.(section.page_number)}
-                            className="text-xs"
-                                  >
-                                    <ExternalLink className="h-3 w-3 mr-1" />
-                            Go to Page
-                                  </Button>
+            <Card className="bg-background/80 border-primary/20">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <FileText className="h-5 w-5 text-primary" />
+                  Top Relevant Passages
+                  <Badge variant="outline" className="ml-2 text-xs">
+                    {relatedSections.length} found
+                  </Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="max-h-64 overflow-y-auto pr-2 border border-gray-200/50 rounded-lg p-2 hover:border-gray-300/70 transition-colors bg-gradient-to-br from-gray-50/50 to-gray-100/30" style={{ scrollbarWidth: 'thin', scrollbarColor: '#9ca3af #f3f4f6' }}>
+                  <div className="flex flex-col gap-3 w-full">
+                    {relatedSections.map((section, index) => {
+                      const insightType = getInsightType(section.relevance_score, section.explanation);
+                      return (
+                        <Card key={index} className="w-full bg-gradient-to-br from-background to-muted/20 border-2 border-primary/20 hover:border-primary/40 transition-all duration-200 shadow-lg hover:shadow-xl">
+                          <CardHeader className="pb-3">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 bg-primary/20 rounded-full flex items-center justify-center">
+                                  {getInsightIcon(insightType)}
                                 </div>
-                      </CardContent>
+                                <div>
+                                  <h5 className="font-semibold text-sm text-foreground">
+                                    {section.document.replace('.pdf', '').replace('.docx', '').replace('.txt', '')}
+                                  </h5>
+                                  <p className="text-xs text-muted-foreground">
+                                    Page {section.page_number}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex flex-col items-end gap-1">
+                                {getInsightBadge(insightType)}
+                                <Badge variant="outline" className="text-xs">
+                                  {Math.round(section.relevance_score * 100)}% relevant
+                                </Badge>
+                              </div>
+                            </div>
+                          </CardHeader>
+
+                          <CardContent className="space-y-3">
+                            {/* Section Title Box */}
+                            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 rounded-lg p-3 border-l-4 border-blue-500/50 w-full">
+                              <h6 className="font-medium text-xs text-blue-600 mb-1 flex items-center gap-1">
+                                <FileText className="h-3 w-3" />
+                                Section Title
+                              </h6>
+                              <div className="max-h-16 overflow-y-auto w-full border border-blue-200/50 rounded-md p-2 hover:border-blue-300/70 transition-colors" style={{ scrollbarWidth: 'thin', scrollbarColor: '#60a5fa #dbeafe' }}>
+                                <p className="text-xs text-foreground font-medium leading-relaxed">
+                                  {section.section_title}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Explanation Box */}
+                            <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 rounded-lg p-3 border-l-4 border-green-500/50 w-full">
+                              <h6 className="font-medium text-xs text-green-600 mb-1 flex items-center gap-1">
+                                <Info className="h-3 w-3" />
+                                Relevance Explanation
+                              </h6>
+                              <div className="max-h-20 overflow-y-auto w-full border border-green-200/50 rounded-md p-2 hover:border-green-300/70 transition-colors" style={{ scrollbarWidth: 'thin', scrollbarColor: '#4ade80 #dcfce7' }}>
+                                <p className="text-xs text-foreground leading-relaxed">
+                                  {section.explanation}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Enhanced Fields */}
+                            {(section.relationship_type || section.key_concepts) && (
+                              <div className="bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/20 dark:to-amber-950/20 rounded-lg p-3 border-l-4 border-orange-500/50 w-full">
+                                <div className="space-y-2">
+                                  {section.relationship_type && (
+                                    <div>
+                                      <h6 className="font-medium text-xs text-orange-600 mb-1 flex items-center gap-1">
+                                        <Link2 className="h-3 w-3" />
+                                        Relationship Type
+                                      </h6>
+                                      <Badge variant="secondary" className="text-xs">
+                                        {section.relationship_type}
+                                      </Badge>
+                                    </div>
+                                  )}
+                                  
+                                  {section.key_concepts && section.key_concepts.length > 0 && (
+                                    <div>
+                                      <h6 className="font-medium text-xs text-orange-600 mb-1 flex items-center gap-1">
+                                        <Tag className="h-3 w-3" />
+                                        Key Concepts
+                                      </h6>
+                                      <div className="flex flex-wrap gap-1">
+                                        {section.key_concepts.map((concept, idx) => (
+                                          <Badge key={idx} variant="outline" className="text-xs">
+                                            {concept}
+                                          </Badge>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Action Box */}
+                            <div className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 rounded-lg p-3 border-l-4 border-purple-500/50 w-full">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <h6 className="font-medium text-xs text-purple-600 mb-1 flex items-center gap-1">
+                                    <ExternalLink className="h-3 w-3" />
+                                    Quick Action
+                                  </h6>
+                                  <p className="text-xs text-foreground">
+                                    Navigate to this section
+                                  </p>
+                                </div>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => onPageNavigate?.(section.page_number)}
+                                  className="text-xs"
+                                >
+                                  <ExternalLink className="h-3 w-3 mr-1" />
+                                  Go to Page
+                                </Button>
+                              </div>
+                            </div>
+                          </CardContent>
                         </Card>
-                  );
-                })}
-                          </div>
-                    </div>
-                  )}
+                      );
+                    })}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Empty State */}
           {!currentText && !isLoading && !error && (
             <div className="text-center space-y-4 py-8">
-                <div className="p-4 bg-gradient-to-br from-blue-100 to-purple-100 rounded-full w-fit mx-auto">
-                  <Brain className="h-12 w-12 text-blue-600" />
-                </div>
-                <div>
-                  <h4 className="text-xl font-bold text-gray-900 mb-2">
+              <div className="p-4 bg-gradient-to-br from-blue-100 to-purple-100 rounded-full w-fit mx-auto">
+                <Brain className="h-12 w-12 text-blue-600" />
+              </div>
+              <div>
+                <h4 className="text-xl font-bold text-gray-900 mb-2">
                   Insights Section
-                  </h4>
+                </h4>
                 <p className="text-sm text-gray-600">
                   Select text from the document to see relevant passages from your document library
-                  </p>
-                </div>
-                </div>
+                </p>
+              </div>
+            </div>
           )}
 
           {/* No Results */}

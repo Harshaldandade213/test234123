@@ -21,6 +21,8 @@ export interface RelatedSection {
   page_number: number;
   relevance_score: number;
   explanation: string;
+  relationship_type?: string;
+  key_concepts?: string[];
 }
 
 export interface Insight {
@@ -146,18 +148,19 @@ class ApiService {
     persona: string,
     jobToBeDone: string
   ): Promise<RelatedSection[]> {
+    // Convert to form data format to match FastAPI endpoint
+    const formData = new FormData();
+    documentIds.forEach(id => {
+      formData.append('document_ids', id);
+    });
+    formData.append('current_page', currentPage.toString());
+    formData.append('current_section', currentSection);
+    formData.append('persona', persona);
+    formData.append('job_to_be_done', jobToBeDone);
+
     const response = await fetch(`${this.baseUrl}/related-sections`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        document_ids: documentIds,
-        current_page: currentPage,
-        current_section: currentSection,
-        persona,
-        job_to_be_done: jobToBeDone,
-      }),
+      body: formData,
     });
 
     if (!response.ok) {

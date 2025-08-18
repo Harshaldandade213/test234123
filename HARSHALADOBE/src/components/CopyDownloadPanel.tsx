@@ -21,7 +21,12 @@ interface CopyDownloadPanelProps {
   currentSection?: string;
   documentTitle?: string;
   insights?: Array<{ type: string; content: string }>;
-  relatedSections?: Array<{ section_title: string; explanation: string }>;
+  relatedSections?: Array<{ 
+    section_title: string; 
+    explanation: string; 
+    relationship_type?: string;
+    key_concepts?: string[];
+  }>;
 }
 
 export function CopyDownloadPanel({ 
@@ -82,7 +87,14 @@ export function CopyDownloadPanel({
           csv += `"Insight (${insight.type})","${insight.content.replace(/"/g, '""')}"\n`;
         });
         relatedSections.forEach(section => {
-          csv += `"Related Section","${section.section_title.replace(/"/g, '""')} - ${section.explanation.replace(/"/g, '""')}"\n`;
+          let sectionInfo = `${section.section_title} - ${section.explanation}`;
+          if (section.relationship_type) {
+            sectionInfo += ` (Type: ${section.relationship_type})`;
+          }
+          if (section.key_concepts && section.key_concepts.length > 0) {
+            sectionInfo += ` (Concepts: ${section.key_concepts.join(', ')})`;
+          }
+          csv += `"Related Section","${sectionInfo.replace(/"/g, '""')}"\n`;
         });
         return csv;
       
@@ -103,6 +115,12 @@ export function CopyDownloadPanel({
           txt += 'Related Sections:\n';
           relatedSections.forEach(section => {
             txt += `- ${section.section_title}: ${section.explanation}\n`;
+            if (section.relationship_type) {
+              txt += `  Relationship Type: ${section.relationship_type}\n`;
+            }
+            if (section.key_concepts && section.key_concepts.length > 0) {
+              txt += `  Key Concepts: ${section.key_concepts.join(', ')}\n`;
+            }
           });
         }
         return txt;
