@@ -1,4 +1,4 @@
-from fastapi import FastAPI, File, UploadFile, Form, HTTPException, Depends, Query
+from fastapi import FastAPI, File, UploadFile, Form, HTTPException, Depends, Query, BackgroundTasks
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -45,7 +45,7 @@ app.add_middleware(
 )
 
 # Configuration
-GOOGLE_API_KEY = "AIzaSyDGiX4nxOcanzRLZOA5tL6gB90Aidc-jII"
+GOOGLE_API_KEY = "AIzaSyBnlsp4wUE0VEHKJyxrs-vd0K5qBPtnoaQ"
 AWS_REGION = "us-east-1"
 
 # Configure Google Gemini API
@@ -69,6 +69,11 @@ except Exception as e:
 
 # Global cache for embeddings
 embeddings_cache = {}
+
+# In-memory storage (replace with database in production)
+documents_db = {}
+personas_db = set()
+reading_progress_db = {}
 
 # Initialize documents_db with existing files on startup
 def initialize_documents_db():
@@ -106,8 +111,7 @@ def initialize_documents_db():
     except Exception as e:
         print(f"❌ Error initializing documents_db: {e}")
 
-# Initialize documents_db on startup
-initialize_documents_db()
+# Initialize documents_db on startup (moved to after function definitions)
 
 # Stopwords for keyword extraction
 STOPWORDS = {
@@ -448,11 +452,6 @@ class DocumentSyncRequest(BaseModel):
     content: str
     filename: str
 
-# In-memory storage (replace with database in production)
-documents_db = {}
-personas_db = set()
-reading_progress_db = {}
-
 # Request model for podcast generation
 class PodcastRequest(BaseModel):
     query: str
@@ -494,6 +493,9 @@ def get_document_metadata(file_path: str, filename: str) -> Dict[str, Any]:
     except Exception as e:
         print(f"Error extracting metadata from {filename}: {e}")
         return None
+
+# Initialize documents_db on startup (after function definitions)
+initialize_documents_db()
 
 def save_uploaded_file(upload_file: UploadFile, destination: str) -> bool:
     """Save uploaded file to destination"""
@@ -1631,3 +1633,101 @@ async def download_highlighted_pdf(document_name: str):
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to download highlighted PDF: {str(e)}")
+
+# Create audio directory if it doesn't exist
+os.makedirs("audio", exist_ok=True)
+
+def cleanup_file(path: str):
+    """A helper function to delete a file."""
+    if os.path.exists(path):
+        os.remove(path)
+        print(f"🧹 Cleaned up file: {path}")
+
+@app.post("/podcast/generate")
+async def generate_podcast_and_get_filename(query: str = Form(...)):
+    """
+    Generates a podcast from a query and returns the filename.
+    The file can be downloaded later using the /audio/{filename} endpoint.
+    """
+    try:
+        # Create a unique filename to avoid conflicts
+        # All generated audio will be stored in the 'audio' directory
+        unique_id = uuid.uuid4()
+        output_filename = os.path.join("audio", f"podcast_{unique_id}.mp3")
+        
+        print(f"🎙️ Generating podcast for query: '{query}' -> {output_filename}")
+        
+        # Call the main generation function from app.py
+        # Note: We are now capturing two return values
+        success, audio_files = generate_podcast(query, output_filename)
+        
+        if not success or not audio_files:
+            raise HTTPException(status_code=500, detail="Podcast generation failed at the audio stage.")
+
+        # The final, combined filename is the first (and likely only) item in the list
+        final_filename = os.path.basename(audio_files[0])
+        
+        return {
+            "status": "success",
+            "message": "Podcast generated successfully.",
+            "filename": final_filename,
+            "download_url": f"/audio/{final_filename}"
+        }
+
+    except Exception as e:
+        print(f"❌ Error during podcast generation: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/podcast/download")
+async def generate_and_download_podcast(query: str, background_tasks: BackgroundTasks):
+    """
+    Generates a podcast from a query and streams the audio file for direct download.
+    The server file is automatically cleaned up after the download is complete.
+    """
+    try:
+        # Create a unique filename for temporary storage
+        unique_id = uuid.uuid4()
+        output_filename = os.path.join("audio", f"podcast_{unique_id}.mp3")
+        
+        print(f"⬇️ Generating podcast for immediate download. Query: '{query}'")
+
+        # Call the main generation function
+        success, audio_files = generate_podcast(query, output_filename)
+
+        if not success or not audio_files:
+            raise HTTPException(status_code=500, detail="Failed to generate podcast audio.")
+
+        final_filepath = audio_files[0]
+        
+        # Add a background task to delete the file after the response is sent
+        background_tasks.add_task(cleanup_file, final_filepath)
+
+        # Return the audio file as a streaming response
+        return FileResponse(
+            path=final_filepath,
+            media_type="audio/mpeg",
+            filename=f"podcast_for_{query[:20].replace(' ', '_')}.mp3" # A nice filename for the user
+        )
+
+    except Exception as e:
+        print(f"❌ Error during podcast download generation: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/audio/{filename}")
+async def get_audio_file(filename: str):
+    """
+    Serve audio files for download.
+    """
+    try:
+        file_path = os.path.join("audio", filename)
+        if not os.path.exists(file_path):
+            raise HTTPException(status_code=404, detail="Audio file not found")
+        
+        return FileResponse(
+            path=file_path,
+            media_type="audio/mpeg",
+            filename=filename
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to serve audio file: {str(e)}")

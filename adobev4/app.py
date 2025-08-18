@@ -15,6 +15,15 @@ import docx
 
 # --- TTS Libraries ---
 import boto3
+
+# Import Azure Speech SDK
+try:
+    import azure.cognitiveservices.speech as speechsdk
+    AZURE_SPEECH_AVAILABLE = True
+except ImportError:
+    AZURE_SPEECH_AVAILABLE = False
+    print("Warning: azure-cognitiveservices-speech not available. Azure TTS will be disabled.")
+
 # Import pydub only when needed for audio generation
 try:
     from pydub import AudioSegment
@@ -22,6 +31,8 @@ try:
 except ImportError:
     PYDUB_AVAILABLE = False
     print("Warning: pydub not available. Audio generation will be disabled.")
+    print("Note: On Python 3.13, pydub may require additional dependencies.")
+    print("Audio combining will use ffmpeg fallback instead.")
 
 # Import playsound for audio playback
 try:
@@ -39,12 +50,30 @@ except ImportError:
     FFMPEG_AVAILABLE = False
     print("Warning: ffmpeg-python not available. Audio combining will be disabled.")
 
+# Check for local ffmpeg installation
+import subprocess
+try:
+    result = subprocess.run(['./ffmpeg/ffmpeg.exe', '-version'], 
+                          capture_output=True, text=True, timeout=5)
+    if result.returncode == 0:
+        FFMPEG_AVAILABLE = True
+        print("✅ Local ffmpeg installation found and working")
+except:
+    pass
+
 # --- Configuration ---
 DOCUMENTS_DIR = "documents"
 INDEX_DIR = "index"
 INDEX_FILE = os.path.join(INDEX_DIR, "faiss_index.bin")
 DATA_FILE = os.path.join(INDEX_DIR, "data.pkl")
-GOOGLE_API_KEY = "AIzaSyBLdZ-Z3Dec82Su91bYmcA7zOc8MtWeN3w"
+GOOGLE_API_KEY = "AIzaSyBnlsp4wUE0VEHKJyxrs-vd0K5qBPtnoaQ"
+
+# TTS Provider ('aws' or 'azure') - CHANGE THIS TO SWITCH
+TTS_PROVIDER = "azure" 
+
+# Azure Configuration
+AZURE_SPEECH_KEY = "6LKDbzy1pkGLZNMuTjSxf8hrte5dGlAKFWAHX7R0eczacngvw1reJQQJ99BHACGhslBXJ3w3AAAYACOGhON1"
+AZURE_SPEECH_REGION = "centralindia"  # Updated to centralindia region
 
 # AWS Configuration
 AWS_REGION = "us-east-1"  # Change this to your preferred region
@@ -627,13 +656,125 @@ def generate_podcast_audio_simple(script_text, output_filename="podcast_output.m
         print("3. AWS credentials file: ~/.aws/credentials")
         return False, []
 
+def generate_podcast_audio_azure(script_text, output_filename="podcast_output.mp3"):
+    """
+    Generates podcast audio using Azure Cognitive Services TTS.
+
+    Args:
+        script_text: The podcast script text.
+        output_filename: The base output filename.
+
+    Returns:
+        Tuple of (success, audio_files_list)
+    """
+    print("\n🎵 Stage 2: Generating podcast audio with Azure TTS...")
+
+    # Check for credentials
+    if not AZURE_SPEECH_AVAILABLE:
+        print("\n❌ Azure Speech SDK not available.")
+        print("Please install: pip install azure-cognitiveservices-speech")
+        return False, []
+
+    if not AZURE_SPEECH_KEY or "PASTE_YOUR" in AZURE_SPEECH_KEY:
+        print("\n❌ Azure Speech Key or Region not configured in app.py.")
+        return False, []
+
+    try:
+        # Configure the Azure Speech SDK
+        print(f"🔧 Configuring Azure Speech SDK with region: {AZURE_SPEECH_REGION}")
+        print(f"🔑 Using API key: {AZURE_SPEECH_KEY[:10]}...{AZURE_SPEECH_KEY[-10:]}")
+        speech_config = speechsdk.SpeechConfig(subscription=AZURE_SPEECH_KEY, region=AZURE_SPEECH_REGION)
+
+        # --- Voice Selection (Find more voices in the Azure Portal) ---
+        voice_alex = "en-US-DavisNeural"    # Example male voice
+        voice_sharma = "en-US-NancyNeural"  # Example female voice
+
+        lines = script_text.strip().split('\n')
+        temp_audio_files = []
+
+        for i, line in enumerate(lines):
+            if not line.strip():
+                continue
+
+            speaker_text, voice_name, speaker_name = "", "", ""
+            if line.startswith("Alex:"):
+                speaker_text = line.replace("Alex:", "").strip()
+                voice_name = voice_alex
+                speaker_name = "alex"
+            elif line.startswith("Dr. Sharma:"):
+                speaker_text = line.replace("Dr. Sharma:", "").strip()
+                voice_name = voice_sharma
+                speaker_name = "sharma"
+            else:
+                continue # Skip lines that are not dialogue
+
+            if not speaker_text:
+                continue
+
+            # Create an SSML string to specify the voice
+            ssml_string = f'<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="en-US">'
+            ssml_string += f'<voice name="{voice_name}">{speaker_text}</voice>'
+            ssml_string += '</speak>'
+
+            # Define the output for the temporary audio file (WAV is good for intermediate files)
+            temp_filename = f"{output_filename.replace('.mp3', '')}_{speaker_name}_{i:02d}.wav"
+            audio_config = speechsdk.audio.AudioOutputConfig(filename=temp_filename)
+
+            # Create a speech synthesizer
+            synthesizer = speechsdk.SpeechSynthesizer(speech_config=speech_config, audio_config=audio_config)
+
+            # Synthesize the speech
+            result = synthesizer.speak_ssml_async(ssml_string).get()
+
+            # Check for errors
+            if result.reason == speechsdk.ResultReason.Canceled:
+                cancellation_details = result.cancellation_details
+                print(f"Speech synthesis canceled: {cancellation_details.reason}")
+                if cancellation_details.reason == speechsdk.CancellationReason.Error:
+                    print(f"Error details: {cancellation_details.error_details}")
+                return False, []
+
+            temp_audio_files.append(temp_filename)
+            print(f"   Generated: {temp_filename}")
+
+        print(f"\n✅ Generated {len(temp_audio_files)} individual audio segments!")
+
+        # Always try to combine all the WAV files into a single MP3
+        if temp_audio_files:
+            if FFMPEG_AVAILABLE:
+                if combine_audio_files(temp_audio_files, output_filename):
+                    print(f"🎉 Successfully created single podcast file: {output_filename}")
+                    # Clean up temporary WAV files
+                    for temp_file in temp_audio_files:
+                        try:
+                            os.remove(temp_file)
+                            print(f"   Cleaned up: {temp_file}")
+                        except OSError as e:
+                            print(f"Error cleaning up file {temp_file}: {e}")
+                    return True, [output_filename] # Return the final combined MP3
+                else:
+                    print("⚠️ Could not combine files with ffmpeg. Keeping individual WAV files.")
+                    return True, temp_audio_files
+            else:
+                print("⚠️ ffmpeg-python not available. Install with: pip install ffmpeg-python")
+                print("   Keeping individual WAV files for manual combination.")
+                return True, temp_audio_files
+        else:
+            print("❌ No audio files were generated.")
+            return False, []
+
+    except Exception as e:
+        print(f"\n❌ An error occurred during Azure audio generation: {e}")
+        print("Please ensure your Azure credentials are correct and the SDK is installed.")
+        return False, []
+
 def play_audio_sequence(base_filename, audio_files):
     """
     Plays all generated audio files in sequence.
     
     Args:
         base_filename: The base filename used for generation
-        audio_files: List of generated audio filenames
+        audio_files: List of generated audio filenames (supports both .mp3 and .wav)
     """
     if not PLAYSOUND_AVAILABLE:
         print("\n🎵 Auto-playback not available. Install playsound: pip install playsound")
@@ -677,7 +818,7 @@ def play_audio_sequence(base_filename, audio_files):
 
 def combine_audio_files(audio_files, output_filename):
     """
-    Combines multiple audio files into a single file using ffmpeg.
+    Combines multiple audio files into a single file using ffmpeg or pydub fallback.
     
     Args:
         audio_files: List of audio filenames to combine
@@ -686,45 +827,86 @@ def combine_audio_files(audio_files, output_filename):
     Returns:
         True if successful, False otherwise
     """
-    if not FFMPEG_AVAILABLE:
-        print("\n❌ Audio combining not available. Install ffmpeg-python: pip install ffmpeg-python")
-        print("You can manually combine the audio files using audio editing software.")
-        return False
-    
     if not audio_files:
         print("\n❌ No audio files to combine.")
         return False
     
-    try:
-        print(f"\n🔧 Combining {len(audio_files)} audio files into single file...")
-        
-        # Create a temporary file list for ffmpeg
-        with open('temp_file_list.txt', 'w', encoding='utf-8') as f:
-            for audio_file in audio_files:
-                f.write(f"file '{audio_file}'\n")
-        
-        # Use ffmpeg to concatenate all files
-        (
-            ffmpeg
-            .input('temp_file_list.txt', format='concat', safe=0)
-            .output(output_filename, c='copy')
-            .overwrite_output()
-            .run(quiet=True)
-        )
-        
-        # Clean up temporary file
-        if os.path.exists('temp_file_list.txt'):
-            os.remove('temp_file_list.txt')
-        
-        print(f"✅ Successfully combined audio files into: {output_filename}")
-        return True
-        
-    except Exception as e:
-        print(f"\n❌ Error combining audio files: {e}")
-        # Clean up temporary file if it exists
-        if os.path.exists('temp_file_list.txt'):
-            os.remove('temp_file_list.txt')
-        return False
+    print(f"\n🔧 Combining {len(audio_files)} audio files into single file...")
+    
+    # Try ffmpeg first (faster and more reliable)
+    if FFMPEG_AVAILABLE:
+        try:
+            print("   Using ffmpeg for audio combining...")
+            
+            # Create a temporary file list for ffmpeg
+            with open('temp_file_list.txt', 'w', encoding='utf-8') as f:
+                for audio_file in audio_files:
+                    f.write(f"file '{audio_file}'\n")
+            
+            # Use local ffmpeg executable to concatenate all files
+            ffmpeg_cmd = [
+                './ffmpeg/ffmpeg.exe',
+                '-f', 'concat',
+                '-safe', '0',
+                '-i', 'temp_file_list.txt',
+                '-c:a', 'libmp3lame',  # Use MP3 encoder instead of copy
+                '-b:a', '192k',        # Set bitrate
+                '-y',  # Overwrite output file
+                output_filename
+            ]
+            
+            result = subprocess.run(ffmpeg_cmd, capture_output=True, text=True)
+            
+            # Clean up temporary file
+            if os.path.exists('temp_file_list.txt'):
+                os.remove('temp_file_list.txt')
+            
+            if result.returncode == 0:
+                print(f"✅ Successfully combined audio files using ffmpeg: {output_filename}")
+                return True
+            else:
+                print(f"   ⚠️ ffmpeg failed: {result.stderr}")
+                print("   Falling back to pydub...")
+                
+        except Exception as e:
+            print(f"   ⚠️ ffmpeg failed: {e}")
+            print("   Falling back to pydub...")
+            # Clean up temporary file if it exists
+            if os.path.exists('temp_file_list.txt'):
+                os.remove('temp_file_list.txt')
+    
+    # Fallback to pydub if ffmpeg fails or is not available
+    if PYDUB_AVAILABLE:
+        try:
+            print("   Using pydub for audio combining...")
+            
+            # Load the first audio file
+            combined = AudioSegment.from_wav(audio_files[0])
+            
+            # Add subsequent audio files
+            for audio_file in audio_files[1:]:
+                if os.path.exists(audio_file):
+                    audio_segment = AudioSegment.from_wav(audio_file)
+                    combined += audio_segment
+                    print(f"   Added: {audio_file}")
+                else:
+                    print(f"   ⚠️ File not found: {audio_file}")
+            
+            # Export as MP3
+            combined.export(output_filename, format="mp3")
+            
+            print(f"✅ Successfully combined audio files using pydub: {output_filename}")
+            return True
+            
+        except Exception as e:
+            print(f"   ❌ pydub failed: {e}")
+    
+    # If both methods fail
+    print("\n❌ Audio combining failed with both ffmpeg and pydub.")
+    print("Please install ffmpeg or ensure pydub is working correctly.")
+    print("Install ffmpeg: https://ffmpeg.org/download.html")
+    print("Or install pydub: pip install pydub")
+    return False
 
 def generate_podcast(query_text, output_filename="podcast_output.mp3"):
     """
@@ -744,46 +926,66 @@ def generate_podcast(query_text, output_filename="podcast_output.mp3"):
     analysis_result = analyze_and_categorize(query_text)
     if not analysis_result:
         print("❌ Failed to analyze query. Cannot generate podcast.")
-        return False
+        return False, []
     
     # Stage 2: Generate podcast script
     script_text = generate_podcast_script(query_text, analysis_result)
     if not script_text:
         print("❌ Failed to generate podcast script.")
-        return False
+        return False, []
     
     # Stage 3: Generate audio
-    if PYDUB_AVAILABLE:
-        success = generate_podcast_audio(script_text, output_filename)
-        if success:
-            print("\n🎉 PODCAST GENERATION COMPLETE!")
-            print(f"📁 Audio file: {output_filename}")
-            print("🎵 You can now play the generated podcast!")
-        else:
-            print("\n❌ Podcast generation failed at audio stage.")
-    else:
-        success, audio_files = generate_podcast_audio_simple(script_text, output_filename)
-        if success:
-            if len(audio_files) == 1:
-                print("\n PODCAST GENERATION COMPLETE!")
-                print(f" Single audio file: {audio_files[0]}")
-                print("🎵 You can now play the complete podcast!")
-            else:
-                print("\n PODCAST GENERATION COMPLETE!")
-                print("📁 Individual audio files generated")
-                print("🎵 You can play the individual audio files or combine them manually")
+    success = False
+    audio_files = []
 
-            # Ask user if they want to play the audio
-            try:
-                play_choice = input("\n🎵 Would you like to play the complete podcast now? (y/n): ").lower().strip()
-                if play_choice == "y":
-                    play_audio_sequence(output_filename, audio_files)
-            except KeyboardInterrupt:
-                print("\n⏹️ Skipping playback")
-        else:
-            print("\n❌ Podcast generation failed at audio stage.")
+    if TTS_PROVIDER.lower() == "azure":
+        success, audio_files = generate_podcast_audio_azure(script_text, output_filename)
     
-    return success
+    elif TTS_PROVIDER.lower() == "aws":
+        if PYDUB_AVAILABLE:
+            # This path generates a single combined file directly
+            success = generate_podcast_audio(script_text, output_filename)
+            if success:
+                audio_files = [output_filename]
+            else:
+                audio_files = []
+        else:
+            # This path generates individual files and then combines them
+            success, audio_files = generate_podcast_audio_simple(script_text, output_filename)
+    else:
+        print(f"\n❌ Unknown TTS Provider: '{TTS_PROVIDER}'. Please set to 'aws' or 'azure'.")
+        return False, []
+
+    # Always combine audio files into a single file for frontend playback
+    if success and audio_files:
+        if len(audio_files) > 1:
+            print(f"\n🔧 Combining {len(audio_files)} audio files into single file...")
+            combined_success = combine_audio_files(audio_files, output_filename)
+            if combined_success:
+                # Clean up individual files after successful combination
+                for temp_file in audio_files:
+                    if temp_file != output_filename and os.path.exists(temp_file):
+                        try:
+                            os.remove(temp_file)
+                            print(f"   Cleaned up: {temp_file}")
+                        except OSError as e:
+                            print(f"   Warning: Could not clean up {temp_file}: {e}")
+                audio_files = [output_filename]  # Return only the combined file
+                print(f"✅ Successfully combined into single file: {output_filename}")
+            else:
+                print("⚠️ Could not combine files, keeping individual files")
+        else:
+            print(f"✅ Single audio file ready: {audio_files[0]}")
+
+    # Handle results
+    if success and audio_files:
+        print("\n🎉 PODCAST GENERATION COMPLETE!")
+        print(f"📁 Final audio file: {audio_files[0]}")
+        print("🎵 Ready for frontend playback!")
+    else:
+        print("\n❌ Podcast generation failed at the audio stage.")
+    
+    return success, audio_files
 
 # --- Main CLI ---
 if __name__ == "__main__":

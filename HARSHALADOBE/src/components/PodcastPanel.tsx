@@ -3,6 +3,8 @@ import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { apiService } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { 
@@ -17,7 +19,8 @@ import {
   Mic,
   Download,
   Settings,
-  Loader2
+  Loader2,
+  Send
 } from 'lucide-react';
 
 interface PodcastPanelProps {
@@ -26,6 +29,8 @@ interface PodcastPanelProps {
   currentText?: string;
   relatedSections?: string[];
   insights?: string[];
+  autoQuery?: string; // New prop for auto-populating query
+  onQueryGenerated?: (query: string) => void; // Callback when query is auto-generated
 }
 
 interface AudioSection {
@@ -41,7 +46,9 @@ export function PodcastPanel({
   currentPage, 
   currentText, 
   relatedSections = [], 
-  insights = [] 
+  insights = [],
+  autoQuery,
+  onQueryGenerated
 }: PodcastPanelProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -54,9 +61,116 @@ export function PodcastPanel({
   const [currentSection, setCurrentSection] = useState(0);
   const [podcastScript, setPodcastScript] = useState<string>('');
   const [audioUrl, setAudioUrl] = useState<string>('');
+  const [customQuery, setCustomQuery] = useState<string>('');
+  const [isGeneratingFromQuery, setIsGeneratingFromQuery] = useState(false);
 
   const audioRef = useRef<HTMLAudioElement>(null);
   const { toast } = useToast();
+
+  const handleGenerateFromQuery = async (query?: string) => {
+    const queryToUse = query || customQuery.trim();
+    
+    if (!queryToUse) {
+      toast({
+        title: "Query required",
+        description: "Please enter a query to generate a podcast.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setIsGeneratingFromQuery(true);
+    try {
+      // Generate podcast using the new API endpoint
+      const result = await apiService.generatePodcastFromQuery(queryToUse);
+      
+              if (result.status === 'success') {
+          // Set the audio URL for the generated podcast
+          const fullAudioUrl = result.download_url.startsWith('http') 
+            ? result.download_url 
+            : `${apiService.baseUrl || 'http://localhost:8000'}${result.download_url}`;
+          setAudioUrl(fullAudioUrl);
+          
+          // Create a comprehensive script description
+          const scriptDescription = `AI-generated podcast for query: "${queryToUse}". This podcast explores the topic you requested and provides insights based on the available documents. The audio has been automatically combined from multiple segments into a single, seamless podcast file.`;
+          setPodcastScript(scriptDescription);
+          
+          // Create audio section for the combined podcast
+          const generatedSection: AudioSection = {
+            id: '1',
+            title: `Combined Podcast: ${queryToUse}`,
+            duration: 180, // Estimated duration - will be updated when audio loads
+            type: 'summary',
+            transcript: scriptDescription
+          };
+          
+          setAudioSections([generatedSection]);
+          setDuration(180);
+          
+          toast({
+            title: "Combined Podcast Generated",
+            description: `Your complete podcast for "${queryToUse}" is ready to play. All audio segments have been combined into a single file.`
+          });
+
+        // Automatically start playing the generated podcast
+        setTimeout(() => {
+          handleAutoPlay(fullAudioUrl);
+        }, 500); // Small delay to ensure audio is loaded
+        
+      } else {
+        throw new Error("Podcast generation failed");
+      }
+      
+    } catch (error) {
+      console.error('Failed to generate podcast from query:', error);
+      toast({
+        title: "Podcast generation failed",
+        description: "Unable to generate podcast. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsGeneratingFromQuery(false);
+    }
+  };
+
+  const handleAutoPlay = async (audioUrl: string) => {
+    try {
+      // Set the audio source
+      if (audioRef.current) {
+        audioRef.current.src = audioUrl;
+        audioRef.current.volume = volume[0];
+        
+        // Wait for audio to load
+        await new Promise((resolve, reject) => {
+          if (audioRef.current) {
+            audioRef.current.onloadedmetadata = resolve;
+            audioRef.current.onerror = reject;
+          }
+        });
+        
+        // Start playing
+        await audioRef.current.play();
+        setIsPlaying(true);
+        
+        // Update duration from actual audio
+        if (audioRef.current.duration) {
+          setDuration(audioRef.current.duration);
+        }
+        
+        toast({
+          title: "Podcast started",
+          description: "Your podcast is now playing automatically."
+        });
+      }
+    } catch (error) {
+      console.error('Auto-play failed:', error);
+      toast({
+        title: "Auto-play failed",
+        description: "Click the play button to start the podcast manually.",
+        variant: "destructive"
+      });
+    }
+  };
 
   const handleGenerateAudio = async () => {
     if (!currentText) {
@@ -102,6 +216,11 @@ export function PodcastPanel({
           title: "Podcast generated",
           description: "Your AI-narrated summary is ready to play."
         });
+
+        // Automatically start playing the generated podcast
+        setTimeout(() => {
+          handleAutoPlay(fullAudioUrl);
+        }, 500);
       } else {
         // Fallback to local podcast generation
         throw new Error("API podcast generation failed");
@@ -168,7 +287,7 @@ export function PodcastPanel({
     }
   };
 
-  const handlePlayPause = () => {
+  const handlePlayPause = async () => {
     if (audioSections.length === 0) {
       handleGenerateAudio();
       return;
@@ -183,96 +302,54 @@ export function PodcastPanel({
       return;
     }
     
-    setIsPlaying(!isPlaying);
-    
-    if (audioRef.current || audioUrl.startsWith('browser-tts://')) {
+    if (audioRef.current) {
       if (isPlaying) {
-        // Pause audio or speech synthesis
-        if (audioUrl.startsWith('browser-tts://')) {
-          window.speechSynthesis?.cancel();
-          setIsPlaying(false);
-        } else if (audioRef.current) {
-          audioRef.current.pause();
-        }
+        // Pause audio
+        audioRef.current.pause();
       } else {
-        // Check if this is browser TTS or real audio
-        if (audioUrl.startsWith('browser-tts://')) {
-          // Use browser speech synthesis with optimized settings
-          if ('speechSynthesis' in window && podcastScript) {
-            // Get available voices and prefer female voices for more natural sound
-            const voices = window.speechSynthesis.getVoices();
-            let preferredVoice = null;
-            
-            // Look for high-quality female voices first
-            const femaleVoices = voices.filter(voice => 
-              voice.name.toLowerCase().includes('female') || 
-              voice.name.toLowerCase().includes('woman') ||
-              voice.name.toLowerCase().includes('samantha') ||
-              voice.name.toLowerCase().includes('alex') ||
-              voice.name.toLowerCase().includes('karen') ||
-              voice.name.toLowerCase().includes('victoria')
-            );
-            
-            // Look for natural-sounding voices
-            const naturalVoices = voices.filter(voice => 
-              voice.name.toLowerCase().includes('natural') ||
-              voice.name.toLowerCase().includes('enhanced') ||
-              voice.name.toLowerCase().includes('premium')
-            );
-            
-            // Prefer English voices
-            const englishVoices = voices.filter(voice => voice.lang.startsWith('en'));
-            
-            // Select the best voice available
-            preferredVoice = femaleVoices[0] || naturalVoices[0] || englishVoices[0] || voices[0];
-            
-            // Process script to make it more natural (remove excessive pauses and improve flow)
-            const naturalScript = podcastScript
-              .replace(/\.\s+/g, '. ')  // Normalize sentence spacing
-              .replace(/,\s+/g, ', ')   // Normalize comma spacing
-              .replace(/\s+/g, ' ')     // Remove extra whitespace
-              .replace(/\n\s*\n/g, '. ') // Replace double line breaks with periods
-              .trim();
-            
-            const utterance = new SpeechSynthesisUtterance(naturalScript);
-            
-            // Optimize speech parameters for more natural delivery
-            if (preferredVoice) {
-              utterance.voice = preferredVoice;
-            }
-            utterance.rate = 1.1;        // Slightly faster, more conversational
-            utterance.pitch = 1.0;       // Natural pitch
-            utterance.volume = volume[0];
-            
-            utterance.onstart = () => setIsPlaying(true);
-            utterance.onend = () => setIsPlaying(false);
-            utterance.onerror = () => {
-              setIsPlaying(false);
-              toast({
-                title: "Playback failed",
-                description: "Unable to play audio. Please try again.",
-                variant: "destructive"
-              });
-            };
-            
-            // Cancel any existing speech before starting new one
-            window.speechSynthesis.cancel();
-            window.speechSynthesis.speak(utterance);
-          }
-        } else {
+        // Play audio
+        try {
           // Set the audio source if not already set
           if (audioRef.current.src !== audioUrl) {
             audioRef.current.src = audioUrl;
+            audioRef.current.volume = volume[0];
           }
-          audioRef.current.play().catch(error => {
-            console.error('Error playing audio:', error);
-            toast({
-              title: "Playback failed",
-              description: "Unable to play audio. Please try again.",
-              variant: "destructive"
-            });
-            setIsPlaying(false);
+          
+          await audioRef.current.play();
+        } catch (error) {
+          console.error('Error playing audio:', error);
+          toast({
+            title: "Playback failed",
+            description: "Unable to play audio. Please try again.",
+            variant: "destructive"
           });
+        }
+      }
+    } else if (audioUrl.startsWith('browser-tts://')) {
+      // Handle browser TTS fallback
+      if (isPlaying) {
+        window.speechSynthesis?.cancel();
+      } else {
+        if ('speechSynthesis' in window && podcastScript) {
+          const voices = window.speechSynthesis.getVoices();
+          let preferredVoice = voices.find(voice => 
+            voice.name.toLowerCase().includes('female') || 
+            voice.name.toLowerCase().includes('natural')
+          ) || voices[0];
+          
+          const utterance = new SpeechSynthesisUtterance(podcastScript);
+          if (preferredVoice) {
+            utterance.voice = preferredVoice;
+          }
+          utterance.rate = 1.1;
+          utterance.pitch = 1.0;
+          utterance.volume = volume[0];
+          
+          utterance.onstart = () => setIsPlaying(true);
+          utterance.onend = () => setIsPlaying(false);
+          
+          window.speechSynthesis.cancel();
+          window.speechSynthesis.speak(utterance);
         }
       }
     }
@@ -293,7 +370,7 @@ export function PodcastPanel({
     const time = newTime[0];
     setCurrentTime(time);
     
-    if (audioRef.current) {
+    if (audioRef.current && !isNaN(time)) {
       audioRef.current.currentTime = time;
     }
   };
@@ -305,13 +382,15 @@ export function PodcastPanel({
     
     if (audioRef.current) {
       audioRef.current.volume = vol;
+      audioRef.current.muted = vol === 0;
     }
   };
 
   const toggleMute = () => {
-    setIsMuted(!isMuted);
+    const newMutedState = !isMuted;
+    setIsMuted(newMutedState);
     if (audioRef.current) {
-      audioRef.current.muted = !isMuted;
+      audioRef.current.muted = newMutedState;
     }
   };
 
@@ -335,27 +414,25 @@ export function PodcastPanel({
   const currentSectionIndex = getCurrentSection();
   const currentSectionData = audioSections[currentSectionIndex];
 
-  // Simulate audio progress
+  // Auto-populate query and generate podcast when autoQuery is provided
   useEffect(() => {
-    let interval: NodeJS.Timeout;
-    
-    if (isPlaying && audioSections.length > 0) {
-      interval = setInterval(() => {
-        setCurrentTime(prev => {
-          const newTime = prev + 1;
-          if (newTime >= duration) {
-            setIsPlaying(false);
-            return duration;
-          }
-          return newTime;
-        });
+    if (autoQuery && autoQuery.trim() && !customQuery) {
+      console.log('Auto-populating query:', autoQuery);
+      setCustomQuery(autoQuery.trim());
+      
+      // Automatically generate podcast after a short delay
+      setTimeout(() => {
+        handleGenerateFromQuery(autoQuery.trim());
       }, 1000);
+      
+      // Notify parent component that query was auto-generated
+      if (onQueryGenerated) {
+        onQueryGenerated(autoQuery.trim());
+      }
     }
-    
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [isPlaying, duration, audioSections.length]);
+  }, [autoQuery, customQuery, onQueryGenerated]);
+
+  // Real audio progress is handled by onTimeUpdate event
 
   return (
     <div className="h-full flex flex-col">
@@ -370,6 +447,54 @@ export function PodcastPanel({
       </div>
 
       <div className="p-4 space-y-4">
+        {/* Custom Query Input */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Mic className="h-4 w-4 text-brand-primary" />
+            <h4 className="text-sm font-medium text-text-primary">
+              Generate Podcast from Query
+            </h4>
+          </div>
+          
+          <div className="space-y-2">
+            <Textarea
+              placeholder="Enter your query (e.g., 'Alien', 'Space exploration', 'Technology trends')..."
+              value={customQuery}
+              onChange={(e) => setCustomQuery(e.target.value)}
+              className="min-h-[80px] resize-none"
+              disabled={isGeneratingFromQuery}
+            />
+            
+            <Button
+              onClick={handleGenerateFromQuery}
+              disabled={isGeneratingFromQuery || !customQuery.trim()}
+              className="w-full gap-2"
+            >
+              {isGeneratingFromQuery ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Generating Podcast...
+                </>
+              ) : (
+                <>
+                  <Send className="h-4 w-4" />
+                  Generate Podcast from Query
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+
+        {/* Divider */}
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t border-border-subtle" />
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-background px-2 text-text-tertiary">Or</span>
+          </div>
+        </div>
+
         {/* Generate/Play Controls */}
         {audioSections.length === 0 ? (
           <div className="space-y-4">
@@ -396,7 +521,7 @@ export function PodcastPanel({
               ) : (
                 <>
                   <Play className="h-4 w-4" />
-                  Generate Podcast
+                  Generate Podcast from Current Content
                 </>
               )}
             </Button>
@@ -584,9 +709,11 @@ export function PodcastPanel({
       {/* Hidden Audio Element */}
       <audio
         ref={audioRef}
+        preload="metadata"
         onLoadedMetadata={() => {
           if (audioRef.current) {
             setDuration(audioRef.current.duration);
+            console.log('Audio loaded, duration:', audioRef.current.duration);
           }
         }}
         onTimeUpdate={() => {
@@ -597,6 +724,20 @@ export function PodcastPanel({
         onEnded={() => {
           setIsPlaying(false);
           setCurrentTime(0);
+        }}
+        onPlay={() => {
+          setIsPlaying(true);
+        }}
+        onPause={() => {
+          setIsPlaying(false);
+        }}
+        onError={(e) => {
+          console.error('Audio error:', e);
+          toast({
+            title: "Audio playback error",
+            description: "Unable to play the audio file. Please try again.",
+            variant: "destructive"
+          });
         }}
       />
     </div>

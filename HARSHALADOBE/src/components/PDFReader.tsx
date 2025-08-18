@@ -163,6 +163,7 @@ export function PDFReader({ documents, persona, jobToBeDone, onBack }: PDFReader
   const [goToDialogOpen, setGoToDialogOpen] = useState(false);
   const [goToPage, setGoToPage] = useState('');
   const [manualText, setManualText] = useState('');
+  const [podcastQuery, setPodcastQuery] = useState<string>('');
 
   // Sidebar resize functionality
   const [isResizing, setIsResizing] = useState(false);
@@ -442,7 +443,7 @@ export function PDFReader({ documents, persona, jobToBeDone, onBack }: PDFReader
     });
   };
 
-  // Enhanced text selection handler with real-time insights
+  // Enhanced text selection handler with real-time insights and automatic podcast generation
   const handleTextSelection = async (text: string, page: number) => {
     console.log('Text selected:', text, 'on page:', page);
     setSelectedText(text);
@@ -450,6 +451,18 @@ export function PDFReader({ documents, persona, jobToBeDone, onBack }: PDFReader
     
     // Always open right panel when text is selected
     setRightPanelOpen(true);
+    
+    // Automatically set podcast query and open podcast panel for text selection
+    if (text.length >= 10) {
+      setPodcastQuery(text);
+      setActiveRightPanel('podcast');
+      
+      // Show toast about automatic podcast generation
+      toast({
+        title: "Podcast Generation Started",
+        description: `Generating podcast for: "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}"`,
+      });
+    }
     
     // If insight mode is on, switch to insights panel and display selected text
     if (insightMode) {
@@ -1110,6 +1123,12 @@ export function PDFReader({ documents, persona, jobToBeDone, onBack }: PDFReader
                     currentText={selectedText || getCurrentSectionTitle()}
                     relatedSections={relatedSections.map(r => r.section_title)}
                     insights={currentInsights.map(i => i.content)}
+                    autoQuery={podcastQuery}
+                    onQueryGenerated={(query) => {
+                      console.log('Podcast query generated:', query);
+                      // Clear the query after it's been used
+                      setPodcastQuery('');
+                    }}
                   />
                 </div>
               )}

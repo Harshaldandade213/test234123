@@ -70,7 +70,7 @@ export interface SimplifiedText {
 }
 
 class ApiService {
-  private baseUrl: string;
+  public baseUrl: string;
 
   constructor() {
     this.baseUrl = API_BASE_URL;
@@ -253,6 +253,22 @@ class ApiService {
         related_sections: relatedSections,
         insights,
       }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to generate podcast: ${response.statusText}`);
+    }
+
+    return response.json();
+  }
+
+  async generatePodcastFromQuery(query: string): Promise<{ status: string; message: string; filename: string; download_url: string }> {
+    const formData = new FormData();
+    formData.append('query', query);
+
+    const response = await fetch(`${this.baseUrl}/podcast/generate`, {
+      method: 'POST',
+      body: formData,
     });
 
     if (!response.ok) {
