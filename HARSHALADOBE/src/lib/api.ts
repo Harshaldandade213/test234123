@@ -381,8 +381,14 @@ class ApiService {
     return response.json();
   }
 
-  async getCrossConnections(docId: string): Promise<CrossConnectionsResponse> {
-    const response = await fetch(`${this.baseUrl}/cross-connections/${docId}`, {
+  async getCrossConnections(docId: string, persona?: string, jobToBeDone?: string, selectedText?: string): Promise<CrossConnectionsResponse> {
+    const params = new URLSearchParams();
+    if (persona) params.append('persona', persona);
+    if (jobToBeDone) params.append('job_to_be_done', jobToBeDone);
+    if (selectedText) params.append('current_section', selectedText);
+    
+    const url = `${this.baseUrl}/cross-connections/${docId}${params.toString() ? '?' + params.toString() : ''}`;
+    const response = await fetch(url, {
       method: 'GET',
     });
 
@@ -510,10 +516,25 @@ class ApiService {
 
 export interface CrossConnectionsResponse {
   document_id: string;
-  related_documents: RelatedDocument[];
-  contradictions: Contradiction[];
-  insights: CrossDocumentInsight[];
-  total_connections: number;
+  document_title: string;
+  selected_text: string;
+  related_sections: RelatedSection[];
+  total_related_sections: number;
+  analysis_summary: {
+    sections_found: number;
+    average_relevance: number;
+    top_sources: string[];
+    relevance_distribution: {
+      high: number;
+      medium: number;
+      low: number;
+    };
+  };
+  metadata: {
+    analysis_timestamp: string;
+    section_query_used: string;
+    analysis_type: string;
+  };
 }
 
 export interface RelatedDocument {

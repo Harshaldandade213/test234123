@@ -275,7 +275,7 @@ export function InsightsPanel({
                  </Button>
                </div>
                <p className="text-xs text-muted-foreground">
-                 Use the adobev4 backend's analyze-query endpoint to get insights on any topic
+                 Use the adobev4 backend's insights/generate endpoint to get insights on any topic with related passages
                </p>
              </CardContent>
            </Card>
@@ -504,9 +504,9 @@ export function InsightsPanel({
                  <CardTitle className="flex items-center gap-2 text-lg">
                    <BarChart3 className="h-5 w-5 text-primary" />
                    Custom Query Analysis Results
-                   <Badge variant="secondary" className="ml-2 text-xs">
-                     Using adobev4 /analyze-query
-                   </Badge>
+                                       <Badge variant="secondary" className="ml-2 text-xs">
+                      Using adobev4 /insights/generate
+                    </Badge>
                  </CardTitle>
                </CardHeader>
                <CardContent className="space-y-4">

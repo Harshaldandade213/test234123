@@ -14,3 +14,6 @@ uvicorn[standard]
 python-multipart
 requests
 scikit-learn
+python-dotenv
+azure-cognitiveservices-speech
+pycryptodome

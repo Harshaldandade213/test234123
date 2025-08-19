@@ -74,6 +74,7 @@ export interface PassageAnalysis {
   justification: string;
   quote: string;
   source: string;
+  passage_preview?: string;
 }
 
 export interface DetailedAnalysisResult {
@@ -200,27 +201,84 @@ class IntegratedApiService {
     }
   }
 
-  // Analyze query using adobev4's analyze-query endpoint
+  // Analyze query using adobev4's insights/generate endpoint
   async analyzeQuery(query: string, documentIds?: string[]): Promise<DetailedAnalysisResult> {
     try {
-      const formData = new FormData();
-      formData.append('query', query);
+      // Get related passages from documents if available
+      let passages: string[] = [];
+      let documentSources: string[] = [];
       
-      // Add document IDs if provided
       if (documentIds && documentIds.length > 0) {
-        formData.append('document_ids', JSON.stringify(documentIds));
+        try {
+          // Get passages from the first few documents
+          const passagesResponse = await fetch(`${this.adobev4Url}/documents`, {
+            method: 'GET',
+          });
+          
+          if (passagesResponse.ok) {
+            const documents = await passagesResponse.json();
+            // Extract text passages from documents with better content selection
+            documents.slice(0, 5).forEach((doc: any) => {
+              if (doc.content) {
+                // Split content into sentences and take the most relevant ones
+                const sentences = doc.content.split(/[.!?]+/).filter((s: string) => s.trim().length > 20);
+                if (sentences.length > 0) {
+                  // Take first 2-3 sentences that might be relevant
+                  const relevantSentences = sentences.slice(0, 3).join('. ') + '.';
+                  passages.push(relevantSentences.substring(0, 300) + "...");
+                  documentSources.push(doc.name || doc.title || 'Unknown Document');
+                }
+              } else if (doc.name) {
+                passages.push(`Content from ${doc.name} - Document available for analysis`);
+                documentSources.push(doc.name);
+              }
+            });
+          }
+        } catch (error) {
+          console.warn('Could not fetch document passages, using default passages');
+          passages = ["AI is evolving fast...", "LLMs are changing industries..."];
+          documentSources = ["Default Content"];
+        }
+      } else {
+        // Default passages if no documents available
+        passages = ["AI is evolving fast...", "LLMs are changing industries..."];
+        documentSources = ["Default Content"];
       }
 
-      const analysisResponse = await fetch(`${this.adobev4Url}/analyze-query`, {
+      console.log('Sending query to /insights/generate:', { query, passagesCount: passages.length });
+
+      const analysisResponse = await fetch(`${this.adobev4Url}/insights/generate`, {
         method: 'POST',
-        body: formData,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query: query,
+          passages: passages
+        }),
       });
 
       if (analysisResponse.ok) {
         const analysisData = await analysisResponse.json();
-        return analysisData;
+        console.log('Received analysis data:', analysisData);
+        
+        // Convert the response to match DetailedAnalysisResult format
+        const detailedAnalysis: DetailedAnalysisResult = {
+          query: query,
+          analysis: analysisData.insights ? analysisData.insights.map((insight: any, index: number) => ({
+            category: insight.type || 'insight',
+            justification: insight.content || insight.description || '',
+            quote: insight.content || '',
+            source: documentSources[index] || 'Generated Analysis',
+            passage_preview: passages[index] || insight.source_passage || ''
+          })) : [],
+          summary: analysisData.summary || analysisData.analysis || 'Analysis completed successfully'
+        };
+        
+        return detailedAnalysis;
       } else {
-        throw new Error(`Query analysis failed: ${analysisResponse.statusText}`);
+        const errorData = await analysisResponse.json();
+        throw new Error(`Query analysis failed: ${errorData.detail || analysisResponse.statusText}`);
       }
     } catch (error) {
       console.error('Error analyzing query:', error);

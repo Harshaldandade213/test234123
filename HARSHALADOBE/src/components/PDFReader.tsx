@@ -443,7 +443,7 @@ export function PDFReader({ documents, persona, jobToBeDone, onBack }: PDFReader
     });
   };
 
-  // Enhanced text selection handler with real-time insights and automatic podcast generation
+  // Enhanced text selection handler with real-time insights and automatic connections
   const handleTextSelection = async (text: string, page: number) => {
     console.log('Text selected:', text, 'on page:', page);
     setSelectedText(text);
@@ -452,15 +452,14 @@ export function PDFReader({ documents, persona, jobToBeDone, onBack }: PDFReader
     // Always open right panel when text is selected
     setRightPanelOpen(true);
     
-    // Automatically set podcast query and open podcast panel for text selection
+    // Automatically open connections panel for text selection to find related sections
     if (text.length >= 10) {
-      setPodcastQuery(text);
-      setActiveRightPanel('podcast');
+      setActiveRightPanel('connections');
       
-      // Show toast about automatic podcast generation
+      // Show toast about automatic related sections search
       toast({
-        title: "Podcast Generation Started",
-        description: `Generating podcast for: "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}"`,
+        title: "Finding Related Sections",
+        description: `Searching for content related to: "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}"`,
       });
     }
     
@@ -1092,6 +1091,9 @@ export function PDFReader({ documents, persona, jobToBeDone, onBack }: PDFReader
                   <div className="p-4 overflow-y-auto h-full">
                     <CrossConnectionsPanel 
                       documentId={currentDocument.id}
+                      persona={persona}
+                      jobToBeDone={jobToBeDone}
+                      selectedText={selectedText}
                       onNavigateToDocument={(docId) => {
                         // Find the document by ID and switch to it
                         const targetDocument = documents.find(doc => doc.id === docId);

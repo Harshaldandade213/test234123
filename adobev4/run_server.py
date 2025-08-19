@@ -19,10 +19,13 @@ def main():
         os.makedirs(dir_name, exist_ok=True)
         print(f"✅ Ensured directory exists: {dir_name}")
     
+    # Import configuration
+    from config import config
+    
     # Configuration
-    host = "0.0.0.0"
-    port = 8000
-    reload = True  # Enable auto-reload for development
+    host = config.HOST
+    port = config.PORT
+    reload = config.DEVELOPMENT_MODE  # Enable auto-reload for development
     
     print(f"🌐 Server will be available at: http://{host}:{port}")
     print(f"📚 API Documentation will be at: http://{host}:{port}/docs")

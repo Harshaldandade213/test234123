@@ -62,24 +62,25 @@ except:
     pass
 
 # --- Configuration ---
-DOCUMENTS_DIR = "documents"
-INDEX_DIR = "index"
+from config import config
+
+DOCUMENTS_DIR = config.DOCUMENTS_DIR
+INDEX_DIR = config.INDEX_DIR
 INDEX_FILE = os.path.join(INDEX_DIR, "faiss_index.bin")
 DATA_FILE = os.path.join(INDEX_DIR, "data.pkl")
-GOOGLE_API_KEY = "AIzaSyBnlsp4wUE0VEHKJyxrs-vd0K5qBPtnoaQ"
 
 # TTS Provider ('aws' or 'azure') - CHANGE THIS TO SWITCH
-TTS_PROVIDER = "azure" 
+TTS_PROVIDER = config.TTS_PROVIDER
 
 # Azure Configuration
-AZURE_SPEECH_KEY = "6LKDbzy1pkGLZNMuTjSxf8hrte5dGlAKFWAHX7R0eczacngvw1reJQQJ99BHACGhslBXJ3w3AAAYACOGhON1"
-AZURE_SPEECH_REGION = "centralindia"  # Updated to centralindia region
+AZURE_SPEECH_KEY = config.AZURE_SPEECH_KEY
+AZURE_SPEECH_REGION = config.AZURE_SPEECH_REGION
 
 # AWS Configuration
-AWS_REGION = "us-east-1"  # Change this to your preferred region
+AWS_REGION = config.AWS_REGION
 
 # Configure Google Gemini API
-genai.configure(api_key=GOOGLE_API_KEY)
+genai.configure(api_key=config.GOOGLE_API_KEY)
 
 # Ensure directories exist
 os.makedirs(DOCUMENTS_DIR, exist_ok=True)

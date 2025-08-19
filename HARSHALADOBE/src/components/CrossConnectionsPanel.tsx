@@ -23,11 +23,14 @@ import {
 
 interface CrossConnectionsPanelProps {
   documentId: string;
+  persona?: string;
+  jobToBeDone?: string;
+  selectedText?: string;
   onNavigateToDocument?: (documentId: string) => void;
   className?: string;
 }
 
-export function CrossConnectionsPanel({ documentId, onNavigateToDocument, className = '' }: CrossConnectionsPanelProps) {
+export function CrossConnectionsPanel({ documentId, persona, jobToBeDone, selectedText, onNavigateToDocument, className = '' }: CrossConnectionsPanelProps) {
   const [connections, setConnections] = useState<CrossConnectionsResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['related']));
@@ -35,18 +38,19 @@ export function CrossConnectionsPanel({ documentId, onNavigateToDocument, classN
 
   useEffect(() => {
     loadConnections();
-  }, [documentId]);
+  }, [documentId, selectedText]);
 
   const loadConnections = async () => {
     try {
       setIsLoading(true);
-      const data = await apiService.getCrossConnections(documentId);
+      // Use selected text as current_section parameter if available
+      const data = await apiService.getCrossConnections(documentId, persona, jobToBeDone, selectedText);
       setConnections(data);
     } catch (error) {
-      console.error('Failed to load cross connections:', error);
+      console.error('Failed to load related sections:', error);
       toast({
         title: "Error",
-        description: "Failed to analyze cross-connections. Please try again.",
+        description: "Failed to analyze related sections. Please try again.",
         variant: "destructive"
       });
     } finally {
@@ -105,7 +109,7 @@ export function CrossConnectionsPanel({ documentId, onNavigateToDocument, classN
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Link2 className="h-5 w-5" />
-            Cross-Document Connections
+            Related Sections
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -120,21 +124,53 @@ export function CrossConnectionsPanel({ documentId, onNavigateToDocument, classN
     );
   }
 
-  if (!connections || (connections.related_documents.length === 0 && connections.contradictions.length === 0 && connections.insights.length === 0)) {
+  if (!connections || connections.related_sections.length === 0) {
     return (
       <Card className={`${className}`}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Link2 className="h-5 w-5" />
-            Cross-Document Connections
+            Related Sections
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-8">
-            <BookOpen className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-            <p className="text-sm text-gray-600">No connections found with other documents.</p>
-            <p className="text-xs text-gray-500 mt-1">Upload more documents to discover relationships.</p>
-          </div>
+          {selectedText ? (
+            <div className="space-y-4">
+              {/* Selected Text Box */}
+              <Card className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <BookOpen className="h-4 w-4 text-blue-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-blue-900 text-sm mb-2">Selected Text</h4>
+                    <div className="bg-white p-3 rounded border border-blue-200">
+                      <p className="text-sm text-gray-800 leading-relaxed">
+                        "{selectedText.substring(0, 200)}{selectedText.length > 200 ? '...' : ''}"
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+              
+              {/* No Results Message */}
+              <div className="text-center py-6">
+                <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <AlertCircle className="h-6 w-6 text-gray-400" />
+                </div>
+                <p className="text-sm font-medium text-gray-700 mb-1">No related sections found</p>
+                <p className="text-xs text-gray-500">Try selecting different text or upload more documents</p>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                <Link2 className="h-6 w-6 text-blue-600" />
+              </div>
+              <p className="text-sm font-medium text-gray-700 mb-1">Select text to find related sections</p>
+              <p className="text-xs text-gray-500">Highlight text in the document to automatically find related content</p>
+            </div>
+          )}
         </CardContent>
       </Card>
     );
@@ -147,350 +183,114 @@ export function CrossConnectionsPanel({ documentId, onNavigateToDocument, classN
           <div>
             <CardTitle className="flex items-center gap-2 text-lg">
               <Link2 className="h-5 w-5 text-primary" />
-              Cross-Document Connections
+              Related Sections
             </CardTitle>
             <CardDescription className="text-sm">
-              {connections.total_connections} connection{connections.total_connections !== 1 ? 's' : ''} found with your document library
+              {connections.total_related_sections} unique related section{connections.total_related_sections !== 1 ? 's' : ''} found
             </CardDescription>
           </div>
-          <ExpandablePanelModal
-            title="Cross-Document Connections"
-            icon={<Link2 className="h-5 w-5 text-primary" />}
-          >
-            <div className="space-y-6">
-              <Card className="border-primary/20 bg-primary/5">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg text-primary">Connection Analysis</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">
-                    Found {connections.total_connections} connection{connections.total_connections !== 1 ? 's' : ''} across your document library, 
-                    including related documents, contradictions, and cross-document insights.
-                  </p>
-                </CardContent>
-              </Card>
-              
-              {/* Show summary of connections in modal */}
-              {connections.related_documents.length > 0 && (
-                <div className="space-y-3">
-                  <h4 className="font-semibold text-foreground">Related Documents</h4>
-                  <div className="grid gap-2">
-                    {connections.related_documents.slice(0, 3).map((doc) => (
-                      <Card key={doc.id} className="border-border/50">
-                        <CardContent className="p-3">
-                          <h5 className="font-medium text-foreground text-sm">{doc.title}</h5>
-                          <p className="text-xs text-muted-foreground">{doc.relationship_type}</p>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </ExpandablePanelModal>
         </div>
       </CardHeader>
-      <CardContent className="space-y-6">
-        {/* Related Documents */}
-        {connections.related_documents.length > 0 && (
-          <Collapsible 
-            open={expandedSections.has('related')} 
-            onOpenChange={() => toggleSection('related')}
-          >
-            <CollapsibleTrigger asChild>
-              <Button variant="ghost" className="w-full justify-between p-3 h-auto hover:bg-blue-50 rounded-lg border border-transparent hover:border-blue-200">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-100 rounded-lg">
-                    <Link2 className="h-4 w-4 text-blue-600" />
-                  </div>
-                  <div className="text-left">
-                    <span className="font-semibold text-gray-900">Related Documents</span>
-                    <div className="text-sm text-gray-500">{connections.related_documents.length} documents found</div>
-                  </div>
+      
+      <CardContent className="space-y-4">
+        {/* Selected Text Box */}
+        {selectedText && (
+          <Card className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200">
+            <div className="flex items-start gap-3">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <BookOpen className="h-4 w-4 text-blue-600" />
+              </div>
+              <div className="flex-1">
+                <h4 className="font-semibold text-blue-900 text-sm mb-2">Selected Text</h4>
+                <div className="bg-white p-3 rounded border border-blue-200">
+                  <p className="text-sm text-gray-800 leading-relaxed">
+                    "{selectedText.substring(0, 200)}{selectedText.length > 200 ? '...' : ''}"
+                  </p>
                 </div>
-                {expandedSections.has('related') ? 
-                  <ChevronDown className="h-5 w-5 text-gray-400" /> : 
-                  <ChevronRight className="h-5 w-5 text-gray-400" />
-                }
-              </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="space-y-3 mt-4 pl-2">
-              {connections.related_documents.map((doc, index) => (
-                <Card key={index} className="p-4 hover:shadow-md transition-all duration-200 border-l-4 border-l-blue-500 bg-gradient-to-r from-blue-50/50 to-transparent">
+                                 <div className="flex items-center gap-2 mt-2">
+                   <Badge variant="outline" className="text-xs bg-blue-100 border-blue-300 text-blue-800">
+                     Auto-analyzed
+                   </Badge>
+                   <span className="text-xs text-blue-600">
+                     {connections.total_related_sections} unique related sections found
+                   </span>
+                 </div>
+              </div>
+            </div>
+          </Card>
+        )}
+
+        {/* Related Sections Grid */}
+        {connections.related_sections.length > 0 && (
+          <div className="space-y-3">
+                         <div className="flex items-center gap-2">
+               <h4 className="font-semibold text-gray-900 text-sm">Related Sections</h4>
+               <Badge variant="secondary" className="text-xs">
+                 {connections.related_sections.length} unique found
+               </Badge>
+             </div>
+            
+            <div className="grid gap-3">
+              {connections.related_sections.map((section, index) => (
+                <Card key={index} className="p-4 hover:shadow-md transition-all duration-200 border border-gray-200 bg-white">
                   <div className="space-y-3">
+                    {/* Document Header */}
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <h4 className="font-semibold text-gray-900 text-sm line-clamp-2 mb-2">{doc.document_title}</h4>
-                        <div className="flex items-center gap-2 mb-2">
-                          <Badge variant="secondary" className={`text-xs font-medium ${getConnectionTypeColor(doc.connection_type)} border`}>
-                            {getConnectionTypeIcon(doc.connection_type)}
-                            <span className="ml-1 capitalize">{doc.connection_type}</span>
+                        <h5 className="font-semibold text-gray-900 text-sm line-clamp-1 mb-1">
+                          {section.document}
+                        </h5>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="text-xs bg-green-50 border-green-200 text-green-800">
+                            {Math.round(section.relevance_score * 100)}% match
                           </Badge>
-                          <div className="flex items-center gap-1">
-                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                            <span className="text-xs text-gray-600 font-medium">
-                              {Math.round(doc.relevance_score * 100)}% match
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                      {onNavigateToDocument && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => onNavigateToDocument(doc.document_id)}
-                          className="ml-3 border-blue-200 text-blue-700 hover:bg-blue-50"
-                        >
-                          <ExternalLink className="h-3 w-3 mr-1" />
-                          View
-                        </Button>
-                      )}
-                    </div>
-                    <p className="text-xs text-gray-700 leading-relaxed bg-white/50 p-2 rounded border-l-2 border-l-blue-200">{doc.explanation}</p>
-                    
-                    {/* Similarities Section */}
-                    {doc.similarities && doc.similarities.length > 0 && (
-                      <div className="space-y-2">
-                        <h6 className="text-xs font-semibold text-gray-700 flex items-center gap-1">
-                          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                          Similar Content Found
-                        </h6>
-                        {doc.similarities.slice(0, 2).map((similarity, idx) => (
-                          <div key={idx} className="bg-green-50/50 p-3 rounded border border-green-200">
-                            <div className="space-y-2">
-                              <div className="flex items-center gap-1 mb-1">
-                                <Badge variant="outline" className="text-xs px-2 py-1 bg-green-100 border-green-300 text-green-800">
-                                  {similarity.similarity_type.replace('_', ' ')}
-                                </Badge>
-                              </div>
-                              <div className="grid grid-cols-1 gap-2 text-xs">
-                                <div>
-                                  <span className="font-medium text-gray-700">Current: </span>
-                                  <span className="text-gray-600 italic">"{similarity.doc1_quote}"</span>
-                                </div>
-                                <div>
-                                  <span className="font-medium text-gray-700">Related: </span>
-                                  <span className="text-gray-600 italic">"{similarity.doc2_quote}"</span>
-                                </div>
-                              </div>
-                              {similarity.explanation && (
-                                <p className="text-xs text-gray-600 mt-1 bg-white/60 p-2 rounded">
-                                  {similarity.explanation}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                        {doc.similarities.length > 2 && (
-                          <p className="text-xs text-gray-500 italic">
-                            +{doc.similarities.length - 2} more similarities found
-                          </p>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Complementary Insights Section */}
-                    {doc.complementary_insights && doc.complementary_insights.length > 0 && (
-                      <div className="space-y-2">
-                        <h6 className="text-xs font-semibold text-gray-700 flex items-center gap-1">
-                          <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                          Complementary Insights
-                        </h6>
-                        {doc.complementary_insights.slice(0, 2).map((insight, idx) => (
-                          <div key={idx} className="bg-purple-50/50 p-3 rounded border border-purple-200">
-                            <p className="text-xs text-gray-700 font-medium mb-2">{insight.insight}</p>
-                            <div className="grid grid-cols-1 gap-2 text-xs">
-                              <div>
-                                <span className="font-medium text-gray-700">Supporting evidence: </span>
-                                <span className="text-gray-600">"{insight.doc1_support}"</span>
-                              </div>
-                              <div>
-                                <span className="font-medium text-gray-700">Related evidence: </span>
-                                <span className="text-gray-600">"{insight.doc2_support}"</span>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                        {doc.complementary_insights.length > 2 && (
-                          <p className="text-xs text-gray-500 italic">
-                            +{doc.complementary_insights.length - 2} more insights available
-                          </p>
-                        )}
-                      </div>
-                    )}
-
-                    {doc.key_sections.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5">
-                        {doc.key_sections.slice(0, 3).map((section, idx) => (
-                          <Badge key={idx} variant="outline" className="text-xs px-2 py-1 bg-blue-50 border-blue-200 text-blue-800">
-                            {section}
-                          </Badge>
-                        ))}
-                        {doc.key_sections.length > 3 && (
-                          <Badge variant="outline" className="text-xs px-2 py-1 bg-gray-50 border-gray-200 text-gray-600">
-                            +{doc.key_sections.length - 3} more
-                          </Badge>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </Card>
-              ))}
-            </CollapsibleContent>
-          </Collapsible>
-        )}
-
-        {/* Contradictions */}
-        {connections.contradictions.length > 0 && (
-          <Collapsible 
-            open={expandedSections.has('contradictions')} 
-            onOpenChange={() => toggleSection('contradictions')}
-          >
-            <CollapsibleTrigger asChild>
-              <Button variant="ghost" className="w-full justify-between p-3 h-auto hover:bg-red-50 rounded-lg border border-transparent hover:border-red-200">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-red-100 rounded-lg">
-                    <AlertTriangle className="h-4 w-4 text-red-600" />
-                  </div>
-                  <div className="text-left">
-                    <span className="font-semibold text-gray-900">Contradictions</span>
-                    <div className="text-sm text-gray-500">{connections.contradictions.length} conflicts identified</div>
-                  </div>
-                </div>
-                {expandedSections.has('contradictions') ? 
-                  <ChevronDown className="h-5 w-5 text-gray-400" /> : 
-                  <ChevronRight className="h-5 w-5 text-gray-400" />
-                }
-              </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="space-y-3 mt-4 pl-2">
-              {connections.contradictions.map((contradiction, index) => (
-                <Card key={index} className="p-4 border-l-4 border-l-red-500 bg-gradient-to-r from-red-50/50 to-transparent">
-                  <div className="space-y-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <h4 className="font-semibold text-gray-900 text-sm mb-2">{contradiction.document_title}</h4>
-                        <div className="flex items-center gap-2 mb-2">
-                          <Badge variant="secondary" className={`text-xs font-medium ${getSeverityColor(contradiction.severity)} border`}>
-                            <AlertCircle className="h-3 w-3 mr-1" />
-                            {contradiction.severity.toUpperCase()} SEVERITY
-                          </Badge>
-                          {contradiction.contradiction_type && (
-                            <Badge variant="outline" className="text-xs px-2 py-1 bg-orange-50 border-orange-200 text-orange-800">
-                              {contradiction.contradiction_type.replace('_', ' ')}
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {/* Display specific contradictory quotes if available */}
-                    {contradiction.doc1_quote && contradiction.doc2_quote ? (
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <h6 className="text-xs font-semibold text-gray-700 flex items-center gap-1">
-                            <AlertTriangle className="h-3 w-3 text-red-500" />
-                            Contradictory Statements
-                          </h6>
-                          {onNavigateToDocument && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => onNavigateToDocument(contradiction.document_id)}
-                              className="text-xs border-red-200 text-red-700 hover:bg-red-50"
-                            >
-                              <ExternalLink className="h-3 w-3 mr-1" />
-                              View Document
-                            </Button>
-                          )}
-                        </div>
-                        <div className="grid grid-cols-1 gap-3">
-                          <div className="bg-red-50 p-3 rounded border border-red-200">
-                            <div className="text-xs font-medium text-gray-700 mb-1">Current Document:</div>
-                            <p className="text-sm text-gray-800 italic">"{contradiction.doc1_quote}"</p>
-                          </div>
-                          <div className="bg-red-50 p-3 rounded border border-red-200">
-                            <div className="text-xs font-medium text-gray-700 mb-1">{contradiction.document_title}:</div>
-                            <p className="text-sm text-gray-800 italic">"{contradiction.doc2_quote}"</p>
-                          </div>
-                        </div>
-                        <div className="bg-orange-50 p-3 rounded border-l-2 border-l-orange-300">
-                          <div className="text-xs font-medium text-gray-700 mb-1">Analysis:</div>
-                          <p className="text-sm text-gray-700">{contradiction.contradiction}</p>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        <p className="text-sm text-gray-800 leading-relaxed bg-white/50 p-3 rounded border-l-2 border-l-red-300">{contradiction.contradiction}</p>
-                        {onNavigateToDocument && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => onNavigateToDocument(contradiction.document_id)}
-                            className="border-red-200 text-red-700 hover:bg-red-50"
-                          >
-                            <ExternalLink className="h-3 w-3 mr-1" />
-                            Review Document
-                          </Button>
-                        )}
-                      </div>
-                                          )}
-                  </div>
-                </Card>
-              ))}
-            </CollapsibleContent>
-          </Collapsible>
-        )}
-
-        {/* Cross-Document Insights */}
-        {connections.insights.length > 0 && (
-          <Collapsible 
-            open={expandedSections.has('insights')} 
-            onOpenChange={() => toggleSection('insights')}
-          >
-            <CollapsibleTrigger asChild>
-              <Button variant="ghost" className="w-full justify-between p-3 h-auto hover:bg-yellow-50 rounded-lg border border-transparent hover:border-yellow-200">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-yellow-100 rounded-lg">
-                    <Lightbulb className="h-4 w-4 text-yellow-600" />
-                  </div>
-                  <div className="text-left">
-                    <span className="font-semibold text-gray-900">AI Insights</span>
-                    <div className="text-sm text-gray-500">{connections.insights.length} strategic insights</div>
-                  </div>
-                </div>
-                {expandedSections.has('insights') ? 
-                  <ChevronDown className="h-5 w-5 text-gray-400" /> : 
-                  <ChevronRight className="h-5 w-5 text-gray-400" />
-                }
-              </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="space-y-3 mt-4 pl-2">
-              {connections.insights.map((insight, index) => (
-                <Card key={index} className="p-4 bg-gradient-to-r from-purple-50 via-blue-50 to-indigo-50 border border-purple-200/50 hover:shadow-md transition-all duration-200">
-                  <div className="flex items-start gap-3">
-                    <div className="p-2 bg-white rounded-lg shadow-sm">
-                      {getInsightIcon(insight.type)}
-                    </div>
-                    <div className="flex-1 space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Badge variant="secondary" className="text-xs capitalize font-medium bg-purple-100 text-purple-800 border-purple-200">
-                          {insight.type}
-                        </Badge>
-                        <div className="flex items-center gap-1">
-                          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                          <span className="text-xs text-gray-600 font-medium">
-                            {Math.round(insight.confidence * 100)}% confidence
+                          <span className="text-xs text-gray-500">
+                            Page {section.page_number}
                           </span>
                         </div>
                       </div>
-                      <p className="text-sm text-gray-800 leading-relaxed bg-white/60 p-3 rounded border-l-2 border-l-purple-300">{insight.content}</p>
+                    </div>
+                    
+                    {/* Section Content */}
+                    <div className="bg-gray-50 p-3 rounded border">
+                      <p className="text-sm text-gray-700 leading-relaxed line-clamp-3">
+                        {section.text}
+                      </p>
+                    </div>
+                    
+                    {/* Relationship */}
+                    <div className="bg-blue-50 p-2 rounded border border-blue-200">
+                      <p className="text-xs text-blue-700">
+                        <strong>Why related:</strong> {section.explanation}
+                      </p>
                     </div>
                   </div>
                 </Card>
               ))}
-            </CollapsibleContent>
-          </Collapsible>
+            </div>
+          </div>
+        )}
+
+        {/* Quick Summary */}
+        {connections.analysis_summary && (
+          <Card className="p-3 bg-gradient-to-r from-gray-50 to-blue-50 border border-gray-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                 <span className="text-xs font-medium text-gray-700">
+                   {connections.analysis_summary.sections_found} unique sections found
+                 </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-600">
+                  Avg: {Math.round(connections.analysis_summary.average_relevance * 100)}%
+                </span>
+                <span className="text-xs text-gray-600">
+                  High: {connections.analysis_summary.relevance_distribution.high}
+                </span>
+              </div>
+            </div>
+          </Card>
         )}
       </CardContent>
     </Card>

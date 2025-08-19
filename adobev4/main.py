@@ -10,6 +10,7 @@ from datetime import datetime
 import shutil
 from pathlib import Path
 from app import generate_podcast
+# from API import generate_insights  # This module doesn't exist, removing import
 
 # Import service layer functions from app.py
 from app import (
@@ -44,12 +45,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Configuration
-GOOGLE_API_KEY = "AIzaSyBnlsp4wUE0VEHKJyxrs-vd0K5qBPtnoaQ"
-AWS_REGION = "us-east-1"
+# Import configuration
+from config import config
 
 # Configure Google Gemini API
-genai.configure(api_key=GOOGLE_API_KEY)
+genai.configure(api_key=config.GOOGLE_API_KEY)
 
 # Initialize Gemini model for semantic analysis
 try:
@@ -561,6 +561,44 @@ async def get_documents():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to retrieve documents: {str(e)}")
 
+@app.get("/documents/{doc_id}/status")
+async def get_document_status(doc_id: str):
+    """Get the status of a specific document"""
+    try:
+        if doc_id not in documents_db:
+            raise HTTPException(status_code=404, detail="Document not found")
+        
+        doc = documents_db[doc_id]
+        
+        # Check if file exists
+        file_exists = os.path.exists(doc["file_path"])
+        
+        # Get file size if it exists
+        file_size = 0
+        if file_exists:
+            try:
+                file_size = os.path.getsize(doc["file_path"])
+            except:
+                file_size = 0
+        
+        return {
+            "id": doc_id,
+            "name": doc.get("name", ""),
+            "title": doc.get("title", ""),
+            "status": "available" if file_exists else "missing",
+            "file_exists": file_exists,
+            "file_size": file_size,
+            "upload_timestamp": doc.get("upload_timestamp", ""),
+            "language": doc.get("language", "en"),
+            "outline": doc.get("outline", []),
+            "content": doc.get("content", "")[:500] + "..." if doc.get("content") and len(doc.get("content", "")) > 500 else doc.get("content", "")
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve document status: {str(e)}")
+
 @app.delete("/documents/{doc_id}")
 async def delete_document(doc_id: str):
     """Delete a specific document"""
@@ -822,6 +860,71 @@ async def generate_insights(request: InsightRequest):
                 {{
                     "type": "takeaway|fact|contradiction|connection|info|error",
                     "content": "insight description"
+                }}
+            ]
+        }}
+        """
+        
+        response = model.generate_content(prompt)
+        response_text = response.text.strip()
+        
+        # Parse JSON response
+        if response_text.startswith('```json'):
+            response_text = response_text[7:]
+        if response_text.startswith('```'):
+            response_text = response_text[3:]
+        if response_text.endswith('```'):
+            response_text = response_text[:-3]
+        
+        insights_result = json.loads(response_text.strip())
+        return insights_result
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to generate insights: {str(e)}")
+
+@app.post("/insights/generate")
+async def generate_insights_from_query(request: Dict[str, Any]):
+    """Generate insights from a query and passages"""
+    try:
+        query = request.get("query", "")
+        passages = request.get("passages", [])
+        
+        if not query:
+            raise HTTPException(status_code=400, detail="Query is required")
+        
+        if not passages:
+            raise HTTPException(status_code=400, detail="At least one passage is required")
+        
+        # Combine passages into a single text
+        combined_text = "\n\n".join(passages)
+        
+        # Use Gemini to generate insights
+        model = genai.GenerativeModel('gemini-1.5-flash-latest')
+        
+        prompt = f"""
+        Analyze the following query and passages to generate insights.
+        
+        Query: {query}
+        Passages: {combined_text}
+        
+        Generate insights in the following JSON format:
+        {{
+            "query": "{query}",
+            "insights": [
+                {{
+                    "type": "takeaway|fact|contradiction|connection|info|error",
+                    "content": "insight description",
+                    "relevance_score": 0.85,
+                    "source_passage": "which passage this insight comes from"
+                }}
+            ],
+            "summary": "Overall summary of insights",
+            "key_themes": ["theme1", "theme2", "theme3"],
+            "recommendations": [
+                {{
+                    "action": "recommended action",
+                    "priority": "high|medium|low",
+                    "rationale": "why this action is recommended"
                 }}
             ]
         }}
@@ -1310,38 +1413,128 @@ async def get_jobs():
         raise HTTPException(status_code=500, detail=f"Failed to retrieve jobs: {str(e)}")
 
 @app.get("/cross-connections/{doc_id}")
-async def get_cross_connections(doc_id: str):
-    """Get cross-connections for a document"""
+async def get_cross_connections(
+    doc_id: str,
+    current_page: Optional[int] = Query(1, description="Current page number"),
+    current_section: Optional[str] = Query("", description="Current section or selected text"),
+    persona: Optional[str] = Query("", description="User persona"),
+    job_to_be_done: Optional[str] = Query("", description="Job to be done")
+):
+    """Get related sections for a document (simplified connection endpoint)"""
     try:
         if doc_id not in documents_db:
             raise HTTPException(status_code=404, detail="Document not found")
         
-        # Find related documents
+        # Get the current document
         doc = documents_db[doc_id]
-        query = doc.get("title", "")
-        results = perform_search(query, k=5)
+        doc_title = doc.get("title", "")
+        doc_content = doc.get("content", "")
         
-        related_documents = []
-        for result in results:
-            if result.get("document") != doc_id:
-                related_documents.append({
-                    "document_id": result.get("document", ""),
-                    "document_title": result.get("document", ""),
-                    "connection_type": "related",
-                    "relevance_score": result.get("score", 0.0),
-                    "explanation": "Related content found through semantic search",
-                    "key_sections": [result.get("content", "")[:200] + "..."]
-                })
+        # Extract selected text/section for analysis
+        selected_text = current_section if current_section else doc_title
+        if not selected_text and doc_content:
+            # If no section provided, use first 200 characters of content
+            selected_text = doc_content[:200]
+        
+        print(f"🔍 Related sections analysis for document: {doc_id}")
+        print(f"📄 Selected text: {selected_text[:100]}...")
+        print(f"👤 Persona: {persona}, Job: {job_to_be_done}")
+        
+        related_sections = []
+        
+        # Get related sections using the enhanced logic
+        if selected_text and persona and job_to_be_done:
+            try:
+                print(f"🔄 Finding related sections for selected text")
+                
+                # Perform semantic search for related sections
+                section_query = f"{selected_text} {persona} {job_to_be_done}"
+                print(f"🔍 Search query: {section_query}")
+                
+                section_results = perform_search(section_query, k=15)
+                print(f"🔍 Search returned: {len(section_results) if section_results else 0} results")
+                
+                if section_results:
+                    # Convert to section format and filter for uniqueness
+                    temp_sections = []
+                    seen_documents = set()
+                    seen_content_hashes = set()
+                    
+                    for i, result in enumerate(section_results):
+                        try:
+                            print(f"🔍 Processing result {i+1}: {result.get('source', 'Unknown')}")
+                            
+                            if result.get("document") != doc_id:  # Exclude current document
+                                document_name = result.get("source", "Unknown Document").replace('.pdf', '').replace('.docx', '').replace('.txt', '')
+                                content_text = result.get("passage", "")
+                                
+                                # Create a simple content hash for deduplication
+                                content_hash = hash(content_text[:200])  # Use first 200 chars for hash
+                                
+                                # Skip if we've already seen this document or very similar content
+                                if document_name in seen_documents or content_hash in seen_content_hashes:
+                                    print(f"⏭️ Skipping duplicate: {document_name}")
+                                    continue
+                                
+                                section = {
+                                    "document": document_name,
+                                    "section_title": content_text[:100] + "..." if len(content_text) > 100 else content_text,
+                                    "page_number": result.get("page", 1),
+                                    "relevance_score": result.get("similarity_score", 0.5),
+                                    "text": content_text,
+                                    "explanation": f"Related to selected text: '{selected_text[:50]}...'",
+                                    "relationship_type": "content_similarity",
+                                    "key_concepts": []
+                                }
+                                temp_sections.append(section)
+                                seen_documents.add(document_name)
+                                seen_content_hashes.add(content_hash)
+                                print(f"✅ Added section from: {document_name}")
+                        except Exception as result_error:
+                            print(f"❌ Error processing result {i+1}: {result_error}")
+                            continue
+                    
+                    # Sort by relevance and take unique sections (no fixed limit)
+                    temp_sections.sort(key=lambda x: x["relevance_score"], reverse=True)
+                    related_sections = temp_sections  # Take all unique sections
+                    
+                    print(f"✅ Found {len(related_sections)} unique related sections")
+                else:
+                    print("⚠️ No related sections found")
+                    
+            except Exception as section_error:
+                print(f"❌ Error in related sections analysis: {section_error}")
+                import traceback
+                traceback.print_exc()
+                related_sections = []
         
         return {
             "document_id": doc_id,
-            "related_documents": related_documents,
-            "contradictions": [],
-            "insights": [],
-            "total_connections": len(related_documents)
+            "document_title": doc_title,
+            "selected_text": selected_text,
+            "related_sections": related_sections,
+            "total_related_sections": len(related_sections),
+            "analysis_summary": {
+                "sections_found": len(related_sections),
+                "average_relevance": sum([s["relevance_score"] for s in related_sections]) / len(related_sections) if related_sections else 0,
+                "top_sources": list(set([s["document"] for s in related_sections])),
+                "relevance_distribution": {
+                    "high": len([s for s in related_sections if s["relevance_score"] > 0.7]),
+                    "medium": len([s for s in related_sections if 0.4 <= s["relevance_score"] <= 0.7]),
+                    "low": len([s for s in related_sections if s["relevance_score"] < 0.4])
+                }
+            },
+            "metadata": {
+                "analysis_timestamp": datetime.now().isoformat(),
+                "section_query_used": f"{selected_text[:100]}... {persona} {job_to_be_done}" if selected_text and persona and job_to_be_done else "No section analysis",
+                "analysis_type": "related_sections_only"
+            }
         }
         
     except Exception as e:
+        print(f"❌ Cross connections error: {str(e)}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to get cross connections: {str(e)}")
 
 @app.post("/strategic-insights")
@@ -1731,3 +1924,6 @@ async def get_audio_file(filename: str):
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to serve audio file: {str(e)}")
+
+
+# app.include_router(generate_insights.router, prefix="/insights", tags=["Insights"])  # Removed - router doesn't exist
