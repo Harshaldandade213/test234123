@@ -446,8 +446,18 @@ export function PDFReader({ documents, persona, jobToBeDone, onBack }: PDFReader
   // Enhanced text selection handler with real-time insights and automatic connections
   const handleTextSelection = async (text: string, page: number) => {
     console.log('Text selected:', text, 'on page:', page);
-    setSelectedText(text);
+    console.log('Text type:', typeof text);
+    console.log('Text stringified:', JSON.stringify(text));
+    
+    // Ensure text is a string
+    const textToSet = typeof text === 'string' ? text : String(text || '');
+    setSelectedText(textToSet);
     setCurrentPage(page);
+    
+    // Set podcast query for automatic podcast generation
+    if (textToSet.length >= 10) {
+      setPodcastQuery(textToSet);
+    }
     
     // Always open right panel when text is selected
     setRightPanelOpen(true);

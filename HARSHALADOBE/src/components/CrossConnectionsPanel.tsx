@@ -43,8 +43,17 @@ export function CrossConnectionsPanel({ documentId, persona, jobToBeDone, select
   const loadConnections = async () => {
     try {
       setIsLoading(true);
+      
+      // Debug: Log the selectedText to see what's being passed
+      console.log('CrossConnectionsPanel - selectedText:', selectedText);
+      console.log('CrossConnectionsPanel - selectedText type:', typeof selectedText);
+      console.log('CrossConnectionsPanel - selectedText stringified:', JSON.stringify(selectedText));
+      
+      // Ensure selectedText is a string
+      const textToSend = typeof selectedText === 'string' ? selectedText : String(selectedText || '');
+      
       // Use selected text as current_section parameter if available
-      const data = await apiService.getCrossConnections(documentId, persona, jobToBeDone, selectedText);
+      const data = await apiService.getCrossConnections(documentId, persona, jobToBeDone, textToSend);
       setConnections(data);
     } catch (error) {
       console.error('Failed to load related sections:', error);
@@ -163,13 +172,13 @@ export function CrossConnectionsPanel({ documentId, persona, jobToBeDone, select
               </div>
             </div>
           ) : (
-            <div className="text-center py-8">
+          <div className="text-center py-8">
               <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
                 <Link2 className="h-6 w-6 text-blue-600" />
               </div>
               <p className="text-sm font-medium text-gray-700 mb-1">Select text to find related sections</p>
               <p className="text-xs text-gray-500">Highlight text in the document to automatically find related content</p>
-            </div>
+          </div>
           )}
         </CardContent>
       </Card>
@@ -197,26 +206,26 @@ export function CrossConnectionsPanel({ documentId, persona, jobToBeDone, select
         {selectedText && (
           <Card className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200">
             <div className="flex items-start gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
+                  <div className="p-2 bg-blue-100 rounded-lg">
                 <BookOpen className="h-4 w-4 text-blue-600" />
-              </div>
+                  </div>
               <div className="flex-1">
                 <h4 className="font-semibold text-blue-900 text-sm mb-2">Selected Text</h4>
                 <div className="bg-white p-3 rounded border border-blue-200">
                   <p className="text-sm text-gray-800 leading-relaxed">
                     "{selectedText.substring(0, 200)}{selectedText.length > 200 ? '...' : ''}"
                   </p>
-                </div>
+                  </div>
                                  <div className="flex items-center gap-2 mt-2">
                    <Badge variant="outline" className="text-xs bg-blue-100 border-blue-300 text-blue-800">
                      Auto-analyzed
-                   </Badge>
+                          </Badge>
                    <span className="text-xs text-blue-600">
                      {connections.total_related_sections} unique related sections found
-                   </span>
-                 </div>
-              </div>
-            </div>
+                            </span>
+                          </div>
+                        </div>
+                      </div>
           </Card>
         )}
 
@@ -227,8 +236,8 @@ export function CrossConnectionsPanel({ documentId, persona, jobToBeDone, select
                <h4 className="font-semibold text-gray-900 text-sm">Related Sections</h4>
                <Badge variant="secondary" className="text-xs">
                  {connections.related_sections.length} unique found
-               </Badge>
-             </div>
+                                </Badge>
+                              </div>
             
             <div className="grid gap-3">
               {connections.related_sections.map((section, index) => (
@@ -256,19 +265,19 @@ export function CrossConnectionsPanel({ documentId, persona, jobToBeDone, select
                       <p className="text-sm text-gray-700 leading-relaxed line-clamp-3">
                         {section.text}
                       </p>
-                    </div>
+                        </div>
                     
                     {/* Relationship */}
                     <div className="bg-blue-50 p-2 rounded border border-blue-200">
                       <p className="text-xs text-blue-700">
                         <strong>Why related:</strong> {section.explanation}
                       </p>
-                    </div>
-                  </div>
+                          </div>
+                        </div>
                 </Card>
               ))}
-            </div>
-          </div>
+                        </div>
+                      </div>
         )}
 
         {/* Quick Summary */}
@@ -280,17 +289,17 @@ export function CrossConnectionsPanel({ documentId, persona, jobToBeDone, select
                                  <span className="text-xs font-medium text-gray-700">
                    {connections.analysis_summary.sections_found} unique sections found
                  </span>
-              </div>
-              <div className="flex items-center gap-2">
+                    </div>
+                      <div className="flex items-center gap-2">
                 <span className="text-xs text-gray-600">
                   Avg: {Math.round(connections.analysis_summary.average_relevance * 100)}%
                 </span>
                 <span className="text-xs text-gray-600">
                   High: {connections.analysis_summary.relevance_distribution.high}
-                </span>
-              </div>
-            </div>
-          </Card>
+                          </span>
+                    </div>
+                  </div>
+                </Card>
         )}
       </CardContent>
     </Card>

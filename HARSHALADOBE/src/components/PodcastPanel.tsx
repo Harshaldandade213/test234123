@@ -70,6 +70,11 @@ export function PodcastPanel({
   const handleGenerateFromQuery = async (query?: string) => {
     const queryToUse = query || customQuery.trim();
     
+    // Debug: Log the query to see what's being passed
+    console.log('PodcastPanel - handleGenerateFromQuery called with:', { query, customQuery, queryToUse });
+    console.log('PodcastPanel - query type:', typeof queryToUse);
+    console.log('PodcastPanel - query stringified:', JSON.stringify(queryToUse));
+    
     if (!queryToUse) {
       toast({
         title: "Query required",
@@ -416,6 +421,10 @@ export function PodcastPanel({
 
   // Auto-populate query and generate podcast when autoQuery is provided
   useEffect(() => {
+    console.log('PodcastPanel - useEffect triggered with autoQuery:', autoQuery);
+    console.log('PodcastPanel - autoQuery type:', typeof autoQuery);
+    console.log('PodcastPanel - autoQuery stringified:', JSON.stringify(autoQuery));
+    
     if (autoQuery && autoQuery.trim() && !customQuery) {
       console.log('Auto-populating query:', autoQuery);
       setCustomQuery(autoQuery.trim());
@@ -458,12 +467,56 @@ export function PodcastPanel({
           
           <div className="space-y-2">
             <Textarea
-              placeholder="Enter your query (e.g., 'Alien', 'Space exploration', 'Technology trends')..."
+              placeholder="Enter your query (e.g., 'Alien', 'Space exploration', 'Technology trends')... (Auto-generates when you paste or type substantial text)"
               value={customQuery}
-              onChange={(e) => setCustomQuery(e.target.value)}
+              onChange={(e) => {
+                const newValue = e.target.value;
+                setCustomQuery(newValue);
+                
+                // Auto-generate podcast when text is pasted or typed (if it's substantial)
+                if (newValue.trim().length >= 10 && !isGeneratingFromQuery) {
+                  console.log('Auto-generating podcast for pasted/typed text:', newValue);
+                  
+                  // Show toast notification
+                  toast({
+                    title: "Auto-Generating Podcast",
+                    description: `Generating podcast for: "${newValue.substring(0, 50)}${newValue.length > 50 ? '...' : ''}"`,
+                  });
+                  
+                  // Add a small delay to allow for pasting to complete
+                  setTimeout(() => {
+                    handleGenerateFromQuery(newValue);
+                  }, 500);
+                }
+              }}
+              onPaste={(e) => {
+                // Handle paste event specifically
+                setTimeout(() => {
+                  const pastedText = e.currentTarget.value;
+                  if (pastedText.trim().length >= 10 && !isGeneratingFromQuery) {
+                    console.log('Auto-generating podcast for pasted text:', pastedText);
+                    
+                    // Show toast notification
+                    toast({
+                      title: "Auto-Generating Podcast",
+                      description: `Generating podcast for pasted text: "${pastedText.substring(0, 50)}${pastedText.length > 50 ? '...' : ''}"`,
+                    });
+                    
+                    handleGenerateFromQuery(pastedText);
+                  }
+                }, 100);
+              }}
               className="min-h-[80px] resize-none"
               disabled={isGeneratingFromQuery}
             />
+            
+            {/* Auto-generation indicator */}
+            {customQuery.trim().length >= 10 && !isGeneratingFromQuery && (
+              <div className="flex items-center gap-2 text-xs text-blue-600">
+                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                <span>Ready to auto-generate podcast</span>
+              </div>
+            )}
             
             <Button
               onClick={handleGenerateFromQuery}

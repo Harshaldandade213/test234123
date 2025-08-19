@@ -503,6 +503,8 @@ class ApiService {
     return response.json();
   }
 
+
+
   async downloadHighlightedPDF(documentName: string): Promise<Blob> {
     const response = await fetch(`${this.baseUrl}/download-highlighted/${encodeURIComponent(documentName)}`);
     
