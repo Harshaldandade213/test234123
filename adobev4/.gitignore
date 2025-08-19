@@ -50,3 +50,51 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.temp
+
+# Large binary files and executables
+ffmpeg/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Audio and media files (generated content)
+*.mp3
+*.wav
+*.mp4
+*.avi
+*.mov
+*.wmv
+*.flv
+*.webm
+*.ogg
+*.m4a
+*.aac
+*.flac
+*.wma
+
+# Document uploads and generated content
+uploads/
+audio_cache/
+documents/
+audio/
+index_backup/
+
+# Test files
+test_*.py
+debug_*.py
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Coverage and testing
+.coverage
+.pytest_cache/
+htmlcov/
+
+# Jupyter Notebook
+.ipynb_checkpoints
