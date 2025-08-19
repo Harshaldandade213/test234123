@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Integration test for DocuSense backend functionality
+Integration test for Adobe+ backend functionality
 """
 import os
 import sys
@@ -149,7 +149,7 @@ async def test_tts_service():
         return False
 
 async def main():
-    print("🔍 DocuSense Backend Integration Test")
+    print("🔍 Adobe+ Backend Integration Test")
     print("=" * 50)
     
     # Create necessary directories

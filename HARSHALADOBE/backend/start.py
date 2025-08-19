@@ -17,7 +17,7 @@ def main():
     port = int(os.getenv("PORT", 8000))
     debug = os.getenv("DEBUG", "true").lower() == "true"
     
-    print(f"Starting DocuSense API on {host}:{port}")
+    print(f"Starting Adobe+ API on {host}:{port}")
     print(f"Debug mode: {debug}")
     
     # Check for required environment variables

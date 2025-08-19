@@ -20,7 +20,7 @@ except ImportError:
 # Initialize Gemini and embedding model
 try:
     # Use the new Gemini API key
-    gemini_api_key = os.getenv('GEMINI_API_KEY', 'AIzaSyB53CfT8KbKwgA2NzdHtVZhN9WDkR0Jm1w')
+    gemini_api_key = os.getenv('GEMINI_API_KEY', 'AIzaSyAEYT0RCElrr1U__4uAKIV0XpJ41Dum6ro')
     genai.configure(api_key=gemini_api_key)
     gemini_model = genai.GenerativeModel('gemini-1.5-flash')
     if SEMANTIC_SEARCH_AVAILABLE:

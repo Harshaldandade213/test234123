@@ -9,7 +9,7 @@ load_dotenv()
 class LLMService:
     def __init__(self):
         # Use the new Gemini API key
-        self.api_key = os.getenv("GEMINI_API_KEY", "AIzaSyB53CfT8KbKwgA2NzdHtVZhN9WDkR0Jm1w")
+        self.api_key = os.getenv("GEMINI_API_KEY", "AIzaSyAEYT0RCElrr1U__4uAKIV0XpJ41Dum6ro")
         self.model_name = "gemini-1.5-flash"
         self.model = None
         self._initialize_model()
@@ -427,6 +427,42 @@ class LLMService:
         except Exception as e:
             print(f"Error generating podcast script: {e}")
             return "Failed to generate podcast script."
+    
+    async def generate_podcast_script_from_query(self, query: str) -> str:
+        """Generate a podcast script for a custom query."""
+        if not self.is_available():
+            return "LLM service not available for podcast generation."
+        
+        try:
+            prompt = f"""
+            Create a 2-5 minute engaging podcast script about the following topic or query.
+            Make it conversational, educational, and informative.
+            
+            Topic/Query: {query}
+            
+            Guidelines:
+            - Start with an engaging introduction
+            - Explore the topic from multiple angles
+            - Include interesting facts and insights
+            - Make it conversational and easy to follow
+            - Add brief pauses with [PAUSE] markers
+            - Target 2-5 minutes when read aloud
+            - Don't use markdown formatting
+            - End with a thoughtful conclusion
+            
+            Script:
+            """
+            
+            response = await asyncio.to_thread(
+                self.model.generate_content,
+                prompt
+            )
+            
+            return response.text.strip()
+            
+        except Exception as e:
+            print(f"Error generating podcast script from query: {e}")
+            return "Failed to generate podcast script from query."
     
     async def simplify_text(self, text: str, difficulty_level: str = "simple") -> str:
         """Simplify text based on difficulty level."""

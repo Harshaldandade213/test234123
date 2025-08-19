@@ -329,6 +329,37 @@ async def generate_podcast(request: PodcastRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Podcast generation failed: {str(e)}")
 
+@app.post("/podcast/generate")
+async def generate_podcast_from_query(query: str = Form(...)):
+    """Generate podcast audio from a custom query."""
+    try:
+        # Generate script using LLM for the query
+        script = await llm_service.generate_podcast_script_from_query(query)
+        
+        # Generate audio using TTS
+        audio_file = await tts_service.generate_audio(script)
+        
+        # Create a unique filename for the generated podcast
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        unique_filename = f"podcast_query_{timestamp}_{uuid.uuid4().hex[:8]}.mp3"
+        
+        # Move the generated audio to the cache with the unique name
+        import shutil
+        source_path = f"audio_cache/{audio_file}"
+        target_path = f"audio_cache/{unique_filename}"
+        if os.path.exists(source_path):
+            shutil.move(source_path, target_path)
+            audio_file = unique_filename
+        
+        return {
+            "status": "success",
+            "message": f"Podcast generated successfully for query: {query}",
+            "filename": audio_file,
+            "download_url": f"/audio/{audio_file}"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Podcast generation from query failed: {str(e)}")
+
 @app.post("/simplify-text")
 async def simplify_text(request: SimplifyTextRequest):
     """Simplify text difficulty using LLM."""

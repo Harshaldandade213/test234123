@@ -15,6 +15,7 @@ import { EnhancedLeftPanel } from './EnhancedLeftPanel';
 import { EnhancedStrategicPanel } from './EnhancedStrategicPanel';
 import { CrossConnectionsPanel } from './CrossConnectionsPanel';
 import { FloatingTools } from './FloatingTools';
+import { Logo } from './Logo';
 
 // Hybrid PDF Viewer component that tries Adobe first, then falls back to iframe
 function HybridPDFViewer({ 
@@ -651,57 +652,95 @@ export function PDFReader({ documents, persona, jobToBeDone, onBack }: PDFReader
   return (
     <div className="h-screen flex flex-col bg-background">
       {/* Header */}
-      <header className="border-b border-border-subtle bg-surface-elevated/95 backdrop-blur-md shadow-sm">
-        <div className="flex items-center justify-between px-8 py-5">
-          <div className="flex items-center gap-6">
+      <header className="sticky top-0 z-40 border-b border-border-subtle bg-gradient-to-r from-surface-elevated/95 via-surface-elevated/98 to-surface-elevated/95 backdrop-blur-md shadow-sm">
+        <div className="flex items-center justify-between px-6 py-4 h-16">
+          {/* Left Section - Back, Brand, and Document Chips */}
+          <div className="flex items-center gap-6 min-w-0 flex-1">
             {onBack && (
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={onBack}
-                className="gap-2 hover:bg-surface-hover"
+                className="h-9 w-9 p-0 rounded-xl hover:bg-surface-hover flex-shrink-0 transition-all duration-200 hover:scale-105"
+                aria-label="Go back"
               >
-                ←
-                Back
+                <span className="text-lg">←</span>
               </Button>
             )}
             
-            <div className="flex items-center gap-4">
-              <div className="h-10 w-10 bg-brand-primary/10 rounded-lg flex items-center justify-center">
-                <BookOpen className="h-6 w-6 text-brand-primary" />
+            {/* Brand Section */}
+            <div className="flex items-center gap-4 flex-shrink-0">
+              <div className="relative">
+                <Logo size="sm" showText={false} className="h-10 w-10 drop-shadow-md" />
+                <div className="absolute -top-1 -right-1 w-3 h-3 bg-gradient-to-r from-aplus-warm to-aplus-mid rounded-full animate-pulse border-2 border-white"></div>
               </div>
-              <div>
-                <h1 className="text-xl font-bold text-text-primary">DocuSense</h1>
+              <div className="flex flex-col">
+                <h1 className="text-lg font-bold text-foreground leading-tight tracking-tight">Adobe+</h1>
                 {persona && (
-                  <p className="text-sm text-text-secondary font-medium">
+                  <p className="text-xs text-muted-foreground font-medium bg-muted/50 px-2 py-0.5 rounded-full">
                     {persona} • {jobToBeDone}
                   </p>
                 )}
               </div>
             </div>
+
+            {/* Document Chips - Center Section */}
+            {documents && documents.length > 0 && (
+              <div className="relative overflow-hidden mx-6 flex-1 min-w-0">
+                <div className="flex gap-3 items-center overflow-x-auto scrollbar-none">
+                  {documents.map((doc, index) => (
+                    <button
+                      key={doc.id}
+                      onClick={() => {
+                        setCurrentDocument(doc);
+                        setCurrentPage(1);
+                      }}
+                      className={`
+                        flex-shrink-0 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300
+                        ${currentDocument?.id === doc.id 
+                          ? 'bg-gradient-to-r from-surface-3 to-surface-2 text-foreground border border-border-subtle shadow-md scale-105' 
+                          : 'bg-surface-2 text-muted-foreground hover:bg-surface-3 hover:text-foreground hover:scale-102'
+                        }
+                        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2
+                      `}
+                      title={doc.title || doc.name}
+                      aria-label={`Switch to ${doc.title || doc.name}`}
+                    >
+                      {doc.title || doc.name}
+                    </button>
+                  ))}
+                </div>
+                {/* Enhanced Fade Edges */}
+                <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-surface-elevated/95 via-surface-elevated/80 to-transparent pointer-events-none"></div>
+                <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-surface-elevated/95 via-surface-elevated/80 to-transparent pointer-events-none"></div>
+              </div>
+            )}
           </div>
 
-          <div className="flex items-center gap-3">
+          {/* Right Section - Action Buttons */}
+          <div className="flex items-center gap-3 flex-shrink-0">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setLeftSidebarOpen(!leftSidebarOpen)}
-              className="gap-2 hover:bg-surface-hover"
-              aria-label="Toggle outline"
+              className="h-9 px-4 rounded-xl hover:bg-surface-hover transition-all duration-200 hover:scale-105"
+              aria-label="Toggle outline panel"
             >
               <Menu className="h-4 w-4" />
-              Outline
+              <span className="ml-2 text-sm font-medium">Outline</span>
             </Button>
 
             <Button
               variant={insightMode ? "default" : "ghost"}
               size="sm"
               onClick={() => setInsightMode(!insightMode)}
-              className="gap-2"
+              className="h-9 px-4 rounded-xl transition-all duration-200 hover:scale-105"
               aria-label="Toggle insights mode"
             >
               <Brain className="h-4 w-4" />
-              {insightMode ? 'Insights Mode: On' : 'Insights Mode'}
+              <span className="ml-2 text-sm font-medium">
+                {insightMode ? 'Insights Active' : 'Insights Mode'}
+              </span>
             </Button>
             
             <Button
@@ -709,11 +748,11 @@ export function PDFReader({ documents, persona, jobToBeDone, onBack }: PDFReader
               size="sm"
               onClick={generateIntelligenceHighlights}
               disabled={!documents || !persona || !jobToBeDone}
-              className="gap-2 hover:bg-surface-hover"
+              className="h-9 px-4 rounded-xl hover:bg-surface-hover transition-all duration-200 hover:scale-105"
               aria-label="Generate AI highlights"
             >
               <Highlighter className="h-4 w-4" />
-              AI Highlights
+              <span className="ml-2 text-sm font-medium">AI Highlights</span>
             </Button>
             
             <Dialog open={goToDialogOpen} onOpenChange={setGoToDialogOpen}>
@@ -721,11 +760,11 @@ export function PDFReader({ documents, persona, jobToBeDone, onBack }: PDFReader
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="gap-2 hover:bg-surface-hover"
+                  className="h-9 px-4 rounded-xl hover:bg-surface-hover transition-all duration-200 hover:scale-105"
                   aria-label="Go to page or add text"
                 >
                   <Navigation className="h-4 w-4" />
-                  Go To
+                  <span className="ml-2 text-sm font-medium">Go To</span>
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-md">
@@ -830,22 +869,22 @@ export function PDFReader({ documents, persona, jobToBeDone, onBack }: PDFReader
                 }
               }}
               disabled={!currentDocument || highlights.length === 0}
-              className="gap-2 hover:bg-surface-hover"
+              className="h-8 px-3 rounded-lg hover:bg-surface-hover transition-colors"
               aria-label="Download highlighted PDF"
             >
               <Download className="h-4 w-4" />
-              Download PDF
+              <span className="ml-2 text-sm font-medium">Download PDF</span>
             </Button>
             
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setRightPanelOpen(!rightPanelOpen)}
-              className="gap-2 hover:bg-surface-hover"
+              className="h-8 px-3 rounded-lg hover:bg-surface-hover transition-colors"
               aria-label="Toggle tools panel"
             >
               <Settings className="h-4 w-4" />
-              Tools
+              <span className="ml-2 text-sm font-medium">Tools</span>
             </Button>
             
             <ThemeToggle />

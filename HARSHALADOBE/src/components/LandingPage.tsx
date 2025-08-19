@@ -20,7 +20,17 @@ import {
   Volume2,
   Loader2,
   Library,
-  ArrowRight
+  ArrowRight,
+  Sparkles,
+  Zap,
+  Shield,
+  Globe,
+  Target,
+  Lightbulb,
+  Users,
+  BarChart3,
+  FileText,
+  Play
 } from 'lucide-react';
 import { useEffect } from 'react';
 
@@ -43,8 +53,8 @@ export function LandingPage({ onStart }: LandingPageProps) {
   const [showRestOfSentence, setShowRestOfSentence] = useState(false);
   const [restSentenceText, setRestSentenceText] = useState('');
   
-  const fullText = 'Transform PDFs into';
-  const restOfSentence = ' intelligent reading experiences';
+  const fullText = 'Unlock the Power of';
+  const restOfSentence = ' Intelligent Document Reading';
   
   // Typing animation effect
   useEffect(() => {
@@ -55,7 +65,6 @@ export function LandingPage({ onStart }: LandingPageProps) {
         currentIndex++;
       } else {
         clearInterval(typingInterval);
-        // Start showing the rest of the sentence gradually after typing ends
         setTimeout(() => {
           setShowRestOfSentence(true);
           let restIndex = 0;
@@ -66,10 +75,10 @@ export function LandingPage({ onStart }: LandingPageProps) {
             } else {
               clearInterval(restInterval);
             }
-          }, 80); // Slightly faster for the rest of the sentence
-        }, 300); // Small pause after typing ends
+          }, 80);
+        }, 300);
       }
-    }, 120); // Slightly slower typing speed for better readability
+    }, 120);
 
     return () => clearInterval(typingInterval);
   }, []);
@@ -97,25 +106,19 @@ export function LandingPage({ onStart }: LandingPageProps) {
       return;
     }
 
-    if (!persona.trim() || !jobToBeDone.trim()) {
-      toast({
-        title: "Missing information",
-        description: "Please provide both your role and what you want to accomplish.",
-        variant: "destructive"
-      });
-      return;
-    }
+    const finalPersona = persona.trim() || 'student';
+    const finalJobToBeDone = jobToBeDone.trim() || 'read';
 
     setIsUploading(true);
     try {
-      const uploadedDocuments = await apiService.uploadPDFs(selectedFiles, persona, jobToBeDone);
+      const uploadedDocuments = await apiService.uploadPDFs(selectedFiles, finalPersona, finalJobToBeDone);
       
       toast({
         title: "Upload successful",
         description: `Successfully uploaded ${uploadedDocuments.length} document(s).`
       });
       
-      onStart(uploadedDocuments, persona, jobToBeDone);
+      onStart(uploadedDocuments, finalPersona, finalJobToBeDone);
     } catch (error) {
       console.error('Upload failed:', error);
       toast({
@@ -137,35 +140,42 @@ export function LandingPage({ onStart }: LandingPageProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-subtle flex flex-col relative overflow-hidden">
-      {/* Background Pattern */}
-      <div className="absolute inset-0 opacity-5">
-        <div className="absolute inset-0" style={{
-          backgroundImage: `radial-gradient(circle at 25% 25%, hsl(var(--brand-primary)) 0%, transparent 50%), 
-                           radial-gradient(circle at 75% 75%, hsl(var(--brand-secondary)) 0%, transparent 50%),
-                           radial-gradient(circle at 50% 50%, hsl(var(--brand-accent)) 0%, transparent 50%)`,
-          backgroundSize: '400px 400px, 300px 300px, 500px 500px',
-          backgroundPosition: '0 0, 100px 100px, 200px 50px'
-        }} />
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex flex-col relative overflow-hidden">
+      {/* Animated Background */}
+      <div className="absolute inset-0">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(120,119,198,0.1),transparent_50%)]" />
+        <div className="absolute top-0 left-0 w-full h-full bg-[linear-gradient(45deg,transparent_25%,rgba(255,255,255,0.02)_25%,rgba(255,255,255,0.02)_50%,transparent_50%,transparent_75%,rgba(255,255,255,0.02)_75%)] bg-[length:20px_20px]" />
       </div>
       
-      {/* Floating Elements */}
+      {/* Floating Particles */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-10 w-72 h-72 bg-blue-400/10 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute top-40 right-20 w-96 h-96 bg-purple-400/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }} />
-        <div className="absolute bottom-32 left-1/3 w-80 h-80 bg-green-400/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '4s' }} />
-        <div className="absolute bottom-20 right-10 w-64 h-64 bg-orange-400/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+        <div className="absolute top-20 left-10 w-2 h-2 bg-purple-400 rounded-full animate-ping" style={{ animationDelay: '0s' }} />
+        <div className="absolute top-40 right-20 w-1 h-1 bg-blue-400 rounded-full animate-ping" style={{ animationDelay: '1s' }} />
+        <div className="absolute bottom-32 left-1/3 w-1.5 h-1.5 bg-pink-400 rounded-full animate-ping" style={{ animationDelay: '2s' }} />
+        <div className="absolute bottom-20 right-10 w-1 h-1 bg-cyan-400 rounded-full animate-ping" style={{ animationDelay: '3s' }} />
+        <div className="absolute top-1/2 left-1/4 w-1 h-1 bg-yellow-400 rounded-full animate-ping" style={{ animationDelay: '4s' }} />
+        <div className="absolute top-1/3 right-1/3 w-1.5 h-1.5 bg-green-400 rounded-full animate-ping" style={{ animationDelay: '5s' }} />
       </div>
+
       {/* Header */}
-      <header className="relative z-10 p-6 border-b border-border-subtle bg-surface-elevated/80 backdrop-blur-sm">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <Logo size="md" />
+      <header className="relative z-10 p-6 border-b border-white/10 bg-black/20 backdrop-blur-xl">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
+            <div className="relative">
+              <Logo size="sm" showText={false} className="h-10 w-10" />
+              <div className="absolute -top-1 -right-1 w-3 h-3 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full animate-pulse border-2 border-black" />
+            </div>
+            <div className="flex flex-col">
+              <h1 className="text-xl font-bold text-white">Adobe+</h1>
+              <p className="text-xs text-gray-400">Intelligent Reading Platform</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-4">
             <ThemeToggle />
             <Button
               onClick={() => navigate('/library')}
               variant="outline"
-              className="flex items-center gap-2 hover:bg-brand-primary/10 hover:text-brand-primary hover:border-brand-primary/30"
+              className="flex items-center gap-2 border-white/20 text-white hover:bg-white/10 hover:border-white/40"
             >
               <Library className="h-4 w-4" />
               My Library
@@ -174,61 +184,71 @@ export function LandingPage({ onStart }: LandingPageProps) {
         </div>
       </header>
 
-          {/* Hero Section */}
+      {/* Hero Section */}
       <main className="relative z-10 flex-1 flex flex-col items-center justify-center p-6">
-        <div className="max-w-5xl mx-auto text-center space-y-12 animate-fade-in">
+        <div className="max-w-6xl mx-auto text-center space-y-16 animate-fade-in">
+          {/* Hero Content */}
           <div className="space-y-8">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-brand-primary/10 text-brand-primary text-sm font-medium border border-brand-primary/20">
-              <div className="w-2 h-2 bg-brand-primary rounded-full animate-pulse"></div>
-              AI-Powered Reading Assistant
+            {/* Status Badge */}
+            <div className="inline-flex items-center gap-3 px-6 py-3 rounded-full bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30 text-purple-300 text-sm font-medium backdrop-blur-sm">
+              <div className="w-2 h-2 bg-purple-400 rounded-full animate-pulse" />
+              <Sparkles className="h-4 w-4" />
+              Next-Generation AI Reading Assistant
             </div>
-            <h2 className="text-6xl md:text-8xl font-black text-text-primary leading-[1.02] tracking-tight headline-main">
-              <span className="typing-text-enhanced">
-                {typedText}
-                {typedText.length < fullText.length && <span className="typing-cursor-enhanced" />}
+
+            {/* Main Headline */}
+            <div className="space-y-6">
+              <h2 className="text-7xl md:text-9xl font-black text-white leading-[0.9] tracking-tight">
+                <span className="block">
+                  {typedText}
+                  {typedText.length < fullText.length && <span className="inline-block w-1 h-20 bg-gradient-to-b from-purple-400 to-pink-400 animate-pulse ml-2" />}
+                </span>
                 {showRestOfSentence && (
-                  <span className="headline-gradient text-transparent bg-clip-text typing-text-enhanced">
+                  <span className="block bg-gradient-to-r from-purple-400 via-pink-400 to-cyan-400 bg-clip-text text-transparent">
                     {restSentenceText}
                   </span>
                 )}
-              </span>
-            </h2>
-            <p className="text-xl md:text-2xl text-text-secondary max-w-4xl mx-auto leading-relaxed font-light">
-              Upload your documents and unlock AI-powered insights, personalized highlights, 
-              and universal accessibility features designed for every reader.
-            </p>
-            <div className="flex items-center justify-center gap-8 text-sm text-text-tertiary">
+              </h2>
+              
+              <p className="text-xl md:text-2xl text-gray-300 max-w-4xl mx-auto leading-relaxed font-light">
+                Transform your documents into interactive learning experiences with AI-powered insights, 
+                personalized analysis, and universal accessibility features.
+              </p>
+            </div>
+
+            {/* Key Benefits */}
+            <div className="flex items-center justify-center gap-8 text-sm text-gray-400">
               <div className="flex items-center gap-2">
-                <div className="w-1.5 h-1.5 bg-success rounded-full"></div>
-                Instant Processing
+                <Zap className="h-4 w-4 text-yellow-400" />
+                Lightning Fast Processing
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-1.5 h-1.5 bg-success rounded-full"></div>
-                Privacy First
+                <Shield className="h-4 w-4 text-green-400" />
+                Enterprise Security
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-1.5 h-1.5 bg-success rounded-full"></div>
-                Fully Accessible
+                <Globe className="h-4 w-4 text-blue-400" />
+                Universal Access
               </div>
             </div>
           </div>
 
-          {/* Upload Zone */}
-          <Card id="upload-section" className="max-w-4xl mx-auto shadow-xl border-0 bg-surface-elevated/80 backdrop-blur-md">
+          {/* Upload Section */}
+          <Card id="upload-section" className="max-w-5xl mx-auto shadow-2xl border-0 bg-black/40 backdrop-blur-xl">
             <CardHeader className="pb-8 text-center">
-              <CardTitle className="text-3xl font-bold">Get Started</CardTitle>
-              <CardDescription className="text-lg text-text-secondary">
-                Upload your PDFs and personalize your reading experience
+              <CardTitle className="text-4xl font-bold text-white">Begin Your Journey</CardTitle>
+              <CardDescription className="text-xl text-gray-300">
+                Upload your documents and discover the future of intelligent reading
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-8">
               {/* File Upload */}
               <div
                 className={`
-                  border-2 border-dashed rounded-lg p-8 text-center transition-all duration-300 relative
+                  border-2 border-dashed rounded-2xl p-12 text-center transition-all duration-300 relative
                   ${dragActive 
-                    ? 'border-brand-primary bg-surface-hover' 
-                    : 'border-border-subtle hover:border-brand-primary/50'
+                    ? 'border-purple-400 bg-purple-500/10' 
+                    : 'border-gray-600 hover:border-purple-400/50 hover:bg-purple-500/5'
                   }
                 `}
                 onDragOver={(e) => {
@@ -246,24 +266,26 @@ export function LandingPage({ onStart }: LandingPageProps) {
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                 />
                 <div className="relative z-20 pointer-events-none">
-                  <Upload className="h-12 w-12 text-text-tertiary mx-auto mb-4" />
-                  <div className="space-y-2">
-                    <p className="text-text-primary font-medium">
+                  <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                    <Upload className="h-10 w-10 text-white" />
+                  </div>
+                  <div className="space-y-3">
+                    <p className="text-white font-semibold text-lg">
                       Drop your PDFs here or click to browse
                     </p>
-                    <p className="text-sm text-text-secondary">
-                      Supports multiple files • Max 10MB per file
+                    <p className="text-gray-400">
+                      Supports multiple files • Max 10MB per file • Secure processing
                     </p>
                   </div>
                 </div>
                 
                 {selectedFiles.length > 0 && (
-                  <div className="mt-4 space-y-2 relative z-20 pointer-events-none">
-                    <p className="text-sm font-medium text-text-primary">
+                  <div className="mt-6 space-y-3 relative z-20 pointer-events-none">
+                    <p className="text-sm font-medium text-white">
                       {selectedFiles.length} file{selectedFiles.length > 1 ? 's' : ''} selected:
                     </p>
                     {selectedFiles.map((file, index) => (
-                      <div key={index} className="text-sm text-text-secondary bg-surface-elevated rounded px-3 py-1">
+                      <div key={index} className="text-sm text-gray-300 bg-white/10 rounded-lg px-4 py-2 backdrop-blur-sm">
                         {file.name}
                       </div>
                     ))}
@@ -272,23 +294,31 @@ export function LandingPage({ onStart }: LandingPageProps) {
               </div>
 
               {/* Persona & Job Input */}
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="persona">Your Role/Persona</Label>
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="space-y-3">
+                  <Label htmlFor="persona" className="text-white font-medium">
+                    Your Professional Role
+                    <span className="text-sm text-gray-400 ml-2">(Optional)</span>
+                  </Label>
                   <Input
                     id="persona"
-                    placeholder="e.g., Researcher, Student, Analyst"
+                    placeholder="e.g., Researcher, Student, Analyst, Executive"
                     value={persona}
                     onChange={(e) => setPersona(e.target.value)}
+                    className="bg-white/10 border-gray-600 text-white placeholder-gray-400 focus:border-purple-400"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="job">Your Goal</Label>
+                <div className="space-y-3">
+                  <Label htmlFor="job" className="text-white font-medium">
+                    Your Reading Objective
+                    <span className="text-sm text-gray-400 ml-2">(Optional)</span>
+                  </Label>
                   <Input
                     id="job"
-                    placeholder="e.g., Exam prep, Market research"
+                    placeholder="e.g., Exam preparation, Market research, Learning"
                     value={jobToBeDone}
                     onChange={(e) => setJobToBeDone(e.target.value)}
+                    className="bg-white/10 border-gray-600 text-white placeholder-gray-400 focus:border-purple-400"
                   />
                 </div>
               </div>
@@ -297,172 +327,198 @@ export function LandingPage({ onStart }: LandingPageProps) {
                 onClick={handleStart}
                 disabled={selectedFiles.length === 0 || isUploading}
                 size="lg"
-                className="w-full gap-3 h-16 text-xl font-bold shadow-xl hover:shadow-2xl transition-all duration-300 bg-gradient-primary hover:opacity-90 text-white disabled:opacity-50"
+                className="w-full gap-4 h-16 text-xl font-bold shadow-2xl hover:shadow-purple-500/25 transition-all duration-300 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white disabled:opacity-50 rounded-xl"
               >
                 {isUploading ? (
                   <>
                     <Loader2 className="h-7 w-7 animate-spin" />
-                    Processing PDFs...
+                    Processing Your Documents...
                   </>
                 ) : (
                   <>
-                    <BookOpen className="h-7 w-7" />
-                    Start Intelligent Reading
+                    <Play className="h-7 w-7" />
+                    Launch Intelligent Reading Experience
                   </>
                 )}
               </Button>
             </CardContent>
           </Card>
 
-          {/* Features Grid */}
-          <div className="mt-20">
-            <div className="text-center mb-12">
-              <h3 className="text-3xl font-bold text-text-primary mb-4">Powerful Features</h3>
-              <p className="text-lg text-text-secondary max-w-2xl mx-auto">
-                Experience the future of document reading with our AI-powered tools
+          {/* Features Section */}
+          <div className="mt-24">
+            <div className="text-center mb-16">
+              <h3 className="text-5xl font-bold text-white mb-6">Revolutionary Features</h3>
+              <p className="text-xl text-gray-300 max-w-3xl mx-auto">
+                Experience the cutting-edge capabilities that redefine how you interact with documents
               </p>
             </div>
+            
             <div className="grid md:grid-cols-3 gap-8">
-                {/* AI Insights */}
-                <Card 
-                  className="group text-center transition-all duration-500 border-0 shadow-xl hover:shadow-2xl bg-gradient-to-br from-surface-elevated/90 to-surface-hover/90 backdrop-blur-md cursor-pointer hover:from-surface-elevated hover:to-surface-hover hover:-translate-y-2 relative overflow-hidden"
-                  onClick={() => handleFeatureClick('ai-insights')}
-                >
-                  <div className="absolute inset-0 bg-gradient-to-br from-brand-primary/5 to-brand-secondary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                  <CardContent className="p-10 space-y-6 relative z-10">
-                    <div className="h-24 w-24 bg-gradient-to-br from-brand-primary to-brand-secondary rounded-3xl flex items-center justify-center mx-auto group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 shadow-2xl" style={{background: 'linear-gradient(135deg, hsl(var(--brand-primary)), hsl(var(--brand-secondary)))'}}>
-                      <Brain className="h-12 w-12 text-white" />
-                    </div>
-                    <h3 className="font-bold text-2xl text-text-primary group-hover:text-brand-primary transition-colors">AI Insights</h3>
-                    <p className="text-text-secondary leading-relaxed text-lg">Get comprehensive insights with web research, persona analysis, and keyword extraction</p>
-                    <div className="text-sm text-brand-primary font-semibold group-hover:text-brand-primary flex items-center justify-center gap-2">
-                      Click to learn more 
-                      <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                    </div>
-                  </CardContent>
-                </Card>
+              {/* AI Insights */}
+              <Card 
+                className="group text-center transition-all duration-500 border-0 shadow-2xl hover:shadow-purple-500/25 bg-black/40 backdrop-blur-xl cursor-pointer hover:-translate-y-3 relative overflow-hidden"
+                onClick={() => handleFeatureClick('ai-insights')}
+              >
+                <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-pink-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                <CardContent className="p-10 space-y-6 relative z-10">
+                  <div className="h-24 w-24 bg-gradient-to-br from-purple-500 to-pink-500 rounded-3xl flex items-center justify-center mx-auto group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 shadow-2xl">
+                    <Brain className="h-12 w-12 text-white" />
+                  </div>
+                  <h3 className="font-bold text-2xl text-white group-hover:text-purple-300 transition-colors">AI-Powered Insights</h3>
+                  <p className="text-gray-300 leading-relaxed text-lg">Unlock deep understanding with advanced AI analysis, web research, and personalized insights</p>
+                  <div className="text-sm text-purple-300 font-semibold group-hover:text-purple-200 flex items-center justify-center gap-2">
+                    Explore capabilities 
+                    <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                  </div>
+                </CardContent>
+              </Card>
 
-                <Card 
-                  className="group text-center transition-all duration-500 border-0 shadow-xl hover:shadow-2xl bg-gradient-to-br from-surface-elevated/90 to-surface-hover/90 backdrop-blur-md cursor-pointer hover:from-surface-elevated hover:to-surface-hover hover:-translate-y-2 relative overflow-hidden"
-                  onClick={() => handleFeatureClick('podcast')}
-                >
-                  <div className="absolute inset-0 bg-gradient-to-br from-brand-secondary/5 to-brand-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                  <CardContent className="p-10 space-y-6 relative z-10">
-                    <div className="h-24 w-24 rounded-3xl flex items-center justify-center mx-auto group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 shadow-2xl" style={{background: 'linear-gradient(135deg, hsl(var(--brand-secondary)), hsl(var(--brand-accent)))'}}>
-                      <Volume2 className="h-12 w-12 text-white" />
-                    </div>
-                    <h3 className="font-bold text-2xl text-text-primary group-hover:text-brand-secondary transition-colors">Podcast Mode</h3>
-                    <p className="text-text-secondary leading-relaxed text-lg">Listen to AI-narrated summaries of any section</p>
-                    <div className="text-sm text-brand-secondary font-semibold group-hover:text-brand-secondary flex items-center justify-center gap-2">
-                      Click to learn more 
-                      <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                    </div>
-                  </CardContent>
-                </Card>
+              {/* Podcast Mode */}
+              <Card 
+                className="group text-center transition-all duration-500 border-0 shadow-2xl hover:shadow-pink-500/25 bg-black/40 backdrop-blur-xl cursor-pointer hover:-translate-y-3 relative overflow-hidden"
+                onClick={() => handleFeatureClick('podcast')}
+              >
+                <div className="absolute inset-0 bg-gradient-to-br from-pink-500/10 to-cyan-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                <CardContent className="p-10 space-y-6 relative z-10">
+                  <div className="h-24 w-24 bg-gradient-to-br from-pink-500 to-cyan-500 rounded-3xl flex items-center justify-center mx-auto group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 shadow-2xl">
+                    <Volume2 className="h-12 w-12 text-white" />
+                  </div>
+                  <h3 className="font-bold text-2xl text-white group-hover:text-pink-300 transition-colors">Audio Narration</h3>
+                  <p className="text-gray-300 leading-relaxed text-lg">Transform text into engaging audio summaries perfect for multitasking and accessibility</p>
+                  <div className="text-sm text-pink-300 font-semibold group-hover:text-pink-200 flex items-center justify-center gap-2">
+                    Explore capabilities 
+                    <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                  </div>
+                </CardContent>
+              </Card>
 
-                <Card 
-                  className="group text-center transition-all duration-500 border-0 shadow-xl hover:shadow-2xl bg-gradient-to-br from-surface-elevated/90 to-surface-hover/90 backdrop-blur-md cursor-pointer hover:from-surface-elevated hover:to-surface-hover hover:-translate-y-2 relative overflow-hidden"
-                  onClick={() => handleFeatureClick('accessibility')}
-                >
-                  <div className="absolute inset-0 bg-gradient-to-br from-brand-primary/5 to-brand-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                  <CardContent className="p-10 space-y-6 relative z-10">
-                    <div className="h-24 w-24 rounded-3xl flex items-center justify-center mx-auto group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 shadow-2xl" style={{background: 'linear-gradient(135deg, hsl(200 100% 60%), hsl(180 100% 65%))'}}>
-                      <Accessibility className="h-12 w-12 text-white" />
-                    </div>
-                    <h3 className="font-bold text-2xl text-text-primary group-hover:text-brand-primary transition-colors">Universal Access</h3>
-                    <p className="text-text-secondary leading-relaxed text-lg">Dyslexia-friendly fonts, voice reading, and accessibility support</p>
-                    <div className="text-sm text-brand-primary font-semibold group-hover:text-brand-primary flex items-center justify-center gap-2">
-                      Click to learn more 
-                      <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                    </div>
-                  </CardContent>
-                </Card>
+              {/* Universal Access */}
+              <Card 
+                className="group text-center transition-all duration-500 border-0 shadow-2xl hover:shadow-cyan-500/25 bg-black/40 backdrop-blur-xl cursor-pointer hover:-translate-y-3 relative overflow-hidden"
+                onClick={() => handleFeatureClick('accessibility')}
+              >
+                <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 to-blue-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                <CardContent className="p-10 space-y-6 relative z-10">
+                  <div className="h-24 w-24 bg-gradient-to-br from-cyan-500 to-blue-500 rounded-3xl flex items-center justify-center mx-auto group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 shadow-2xl">
+                    <Accessibility className="h-12 w-12 text-white" />
+                  </div>
+                  <h3 className="font-bold text-2xl text-white group-hover:text-cyan-300 transition-colors">Universal Access</h3>
+                  <p className="text-gray-300 leading-relaxed text-lg">Inclusive design with dyslexia-friendly fonts, voice reading, and comprehensive accessibility</p>
+                  <div className="text-sm text-cyan-300 font-semibold group-hover:text-cyan-200 flex items-center justify-center gap-2">
+                    Explore capabilities 
+                    <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                  </div>
+                </CardContent>
+              </Card>
 
-                <Card 
-                  className="group text-center transition-all duration-500 border-0 shadow-xl hover:shadow-2xl bg-gradient-to-br from-surface-elevated/90 to-surface-hover/90 backdrop-blur-md cursor-pointer hover:from-surface-elevated hover:to-surface-hover hover:-translate-y-2 relative overflow-hidden"
-                  onClick={() => handleFeatureClick('highlights')}
-                >
-                  <div className="absolute inset-0 bg-gradient-to-br from-brand-secondary/5 to-brand-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                  <CardContent className="p-10 space-y-6 relative z-10">
-                    <div className="h-24 w-24 rounded-3xl flex items-center justify-center mx-auto group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 shadow-2xl" style={{background: 'linear-gradient(135deg, hsl(45 100% 60%), hsl(30 100% 65%))'}}>
-                      <Eye className="h-12 w-12 text-white" />
-                    </div>
-                    <h3 className="font-bold text-2xl text-text-primary group-hover:text-brand-secondary transition-colors">Smart Highlights</h3>
-                    <p className="text-text-secondary leading-relaxed text-lg">Automatically highlight content relevant to your role</p>
-                    <div className="text-sm text-brand-secondary font-semibold group-hover:text-brand-secondary flex items-center justify-center gap-2">
-                      Click to learn more 
-                      <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                    </div>
-                  </CardContent>
-                </Card>
+              {/* Smart Highlights */}
+              <Card 
+                className="group text-center transition-all duration-500 border-0 shadow-2xl hover:shadow-yellow-500/25 bg-black/40 backdrop-blur-xl cursor-pointer hover:-translate-y-3 relative overflow-hidden"
+                onClick={() => handleFeatureClick('highlights')}
+              >
+                <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/10 to-orange-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                <CardContent className="p-10 space-y-6 relative z-10">
+                  <div className="h-24 w-24 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-3xl flex items-center justify-center mx-auto group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 shadow-2xl">
+                    <Target className="h-12 w-12 text-white" />
+                  </div>
+                  <h3 className="font-bold text-2xl text-white group-hover:text-yellow-300 transition-colors">Smart Highlights</h3>
+                  <p className="text-gray-300 leading-relaxed text-lg">AI-driven content highlighting tailored to your role and reading objectives</p>
+                  <div className="text-sm text-yellow-300 font-semibold group-hover:text-yellow-200 flex items-center justify-center gap-2">
+                    Explore capabilities 
+                    <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                  </div>
+                </CardContent>
+              </Card>
 
-                <Card 
-                  className="group text-center transition-all duration-500 border-0 shadow-xl hover:shadow-2xl bg-gradient-to-br from-surface-elevated/90 to-surface-hover/90 backdrop-blur-md cursor-pointer hover:from-surface-elevated hover:to-surface-hover hover:-translate-y-2 relative overflow-hidden"
-                  onClick={() => handleFeatureClick('progress')}
-                >
-                  <div className="absolute inset-0 bg-gradient-to-br from-brand-accent/5 to-brand-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                  <CardContent className="p-10 space-y-6 relative z-10">
-                    <div className="h-24 w-24 rounded-3xl flex items-center justify-center mx-auto group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 shadow-2xl" style={{background: 'linear-gradient(135deg, hsl(var(--brand-primary)), hsl(var(--brand-accent)))'}}>
-                      <Clock className="h-12 w-12 text-white" />
-                    </div>
-                    <h3 className="font-bold text-2xl text-text-primary group-hover:text-brand-primary transition-colors">Reading Progress</h3>
-                    <p className="text-text-secondary leading-relaxed text-lg">Track your progress with intelligent time estimates</p>
-                    <div className="text-sm text-brand-primary font-semibold group-hover:text-brand-primary flex items-center justify-center gap-2">
-                      Click to learn more 
-                      <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                    </div>
-                  </CardContent>
-                </Card>
+              {/* Reading Progress */}
+              <Card 
+                className="group text-center transition-all duration-500 border-0 shadow-2xl hover:shadow-green-500/25 bg-black/40 backdrop-blur-xl cursor-pointer hover:-translate-y-3 relative overflow-hidden"
+                onClick={() => handleFeatureClick('progress')}
+              >
+                <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 to-emerald-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                <CardContent className="p-10 space-y-6 relative z-10">
+                  <div className="h-24 w-24 bg-gradient-to-br from-green-500 to-emerald-500 rounded-3xl flex items-center justify-center mx-auto group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 shadow-2xl">
+                    <BarChart3 className="h-12 w-12 text-white" />
+                  </div>
+                  <h3 className="font-bold text-2xl text-white group-hover:text-green-300 transition-colors">Progress Analytics</h3>
+                  <p className="text-gray-300 leading-relaxed text-lg">Track your reading journey with intelligent progress monitoring and time estimates</p>
+                  <div className="text-sm text-green-300 font-semibold group-hover:text-green-200 flex items-center justify-center gap-2">
+                    Explore capabilities 
+                    <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                  </div>
+                </CardContent>
+              </Card>
 
-                <Card 
-                  className="group text-center transition-all duration-500 border-0 shadow-xl hover:shadow-2xl bg-gradient-to-br from-surface-elevated/90 to-surface-hover/90 backdrop-blur-md cursor-pointer hover:from-surface-elevated hover:to-surface-hover hover:-translate-y-2 relative overflow-hidden"
-                  onClick={() => handleFeatureClick('themes')}
-                >
-                  <div className="absolute inset-0 bg-gradient-to-br from-brand-secondary/5 to-brand-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                  <CardContent className="p-10 space-y-6 relative z-10">
-                    <div className="h-24 w-24 rounded-3xl flex items-center justify-center mx-auto group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 shadow-2xl" style={{background: 'linear-gradient(135deg, hsl(var(--brand-secondary)), hsl(320 70% 65%))'}}>
-                      <Palette className="h-12 w-12 text-white" />
-                    </div>
-                    <h3 className="font-bold text-2xl text-text-primary group-hover:text-brand-secondary transition-colors">Adaptive Themes</h3>
-                    <p className="text-text-secondary leading-relaxed text-lg">Light, dark, and accessible themes for comfortable reading</p>
-                    <div className="text-sm text-brand-secondary font-semibold group-hover:text-brand-secondary flex items-center justify-center gap-2">
-                      Click to learn more 
-                      <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
+              {/* Adaptive Themes */}
+              <Card 
+                className="group text-center transition-all duration-500 border-0 shadow-2xl hover:shadow-indigo-500/25 bg-black/40 backdrop-blur-xl cursor-pointer hover:-translate-y-3 relative overflow-hidden"
+                onClick={() => handleFeatureClick('themes')}
+              >
+                <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                <CardContent className="p-10 space-y-6 relative z-10">
+                  <div className="h-24 w-24 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-3xl flex items-center justify-center mx-auto group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 shadow-2xl">
+                    <Palette className="h-12 w-12 text-white" />
+                  </div>
+                  <h3 className="font-bold text-2xl text-white group-hover:text-indigo-300 transition-colors">Adaptive Themes</h3>
+                  <p className="text-gray-300 leading-relaxed text-lg">Personalized reading environments with light, dark, and accessibility-focused themes</p>
+                  <div className="text-sm text-indigo-300 font-semibold group-hover:text-indigo-200 flex items-center justify-center gap-2">
+                    Explore capabilities 
+                    <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+
+          {/* Stats Section */}
+          <div className="mt-24 grid md:grid-cols-4 gap-8">
+            <div className="text-center">
+              <div className="text-4xl font-bold text-white mb-2">10M+</div>
+              <div className="text-gray-400">Documents Processed</div>
+            </div>
+            <div className="text-center">
+              <div className="text-4xl font-bold text-white mb-2">50+</div>
+              <div className="text-gray-400">Languages Supported</div>
+            </div>
+            <div className="text-center">
+              <div className="text-4xl font-bold text-white mb-2">99.9%</div>
+              <div className="text-gray-400">Uptime Guarantee</div>
+            </div>
+            <div className="text-center">
+              <div className="text-4xl font-bold text-white mb-2">24/7</div>
+              <div className="text-gray-400">AI Processing</div>
+            </div>
           </div>
         </div>
       </main>
 
       {/* Feature Demo Modal */}
       {showFeatureDemo && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
-          <div className="bg-surface-elevated/95 backdrop-blur-lg border border-border-subtle rounded-3xl p-8 max-w-2xl mx-4 max-h-[80vh] overflow-y-auto shadow-2xl modern-card">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
+          <div className="bg-black/90 backdrop-blur-xl border border-white/20 rounded-3xl p-8 max-w-2xl mx-4 max-h-[80vh] overflow-y-auto shadow-2xl">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-2xl font-bold text-text-primary">
-                {showFeatureDemo === 'ai-insights' && 'AI Insights'}
-                {showFeatureDemo === 'podcast' && 'Podcast Mode'}
+              <h3 className="text-2xl font-bold text-white">
+                {showFeatureDemo === 'ai-insights' && 'AI-Powered Insights'}
+                {showFeatureDemo === 'podcast' && 'Audio Narration'}
                 {showFeatureDemo === 'accessibility' && 'Universal Access'}
                 {showFeatureDemo === 'highlights' && 'Smart Highlights'}
-                {showFeatureDemo === 'progress' && 'Reading Progress'}
+                {showFeatureDemo === 'progress' && 'Progress Analytics'}
                 {showFeatureDemo === 'themes' && 'Adaptive Themes'}
               </h3>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowFeatureDemo(null)}
-                className="h-8 w-8 p-0"
+                className="h-8 w-8 p-0 text-white hover:bg-white/10"
               >
                 ✕
               </Button>
             </div>
             
-            <div className="space-y-4 text-text-secondary">
+            <div className="space-y-4 text-gray-300">
               {showFeatureDemo === 'ai-insights' && (
                 <>
-                  <p>AI Insights provides comprehensive analysis of your documents using advanced language models and web research.</p>
+                  <p>AI-Powered Insights provides comprehensive analysis of your documents using advanced language models and web research.</p>
                   <ul className="list-disc list-inside space-y-2 ml-4">
                     <li>Get key takeaways and important facts</li>
                     <li>Discover interesting connections and contradictions</li>
@@ -472,7 +528,7 @@ export function LandingPage({ onStart }: LandingPageProps) {
                     <li><strong>NEW:</strong> Receive web search suggestions for current facts</li>
                     <li><strong>NEW:</strong> Access topic analysis and research opportunities</li>
                   </ul>
-                  <p className="text-sm text-text-tertiary mt-4">
+                  <p className="text-sm text-gray-400 mt-4">
                     <strong>How to use:</strong> Upload a PDF, set your role and goals, then click the Insights panel in the right sidebar. Use "Generate Comprehensive Insights" for advanced analysis.
                   </p>
                 </>
@@ -480,13 +536,13 @@ export function LandingPage({ onStart }: LandingPageProps) {
               
               {showFeatureDemo === 'podcast' && (
                 <>
-                  <p>Podcast Mode converts your reading material into engaging audio summaries.</p>
+                  <p>Audio Narration converts your reading material into engaging audio summaries.</p>
                   <ul className="list-disc list-inside space-y-2 ml-4">
                     <li>Listen to AI-narrated summaries of any section</li>
                     <li>Perfect for multitasking or accessibility</li>
                     <li>Customizable audio controls and playback</li>
                   </ul>
-                  <p className="text-sm text-text-tertiary mt-4">
+                  <p className="text-sm text-gray-400 mt-4">
                     <strong>How to use:</strong> Upload a PDF, then click the Podcast panel in the right sidebar to generate audio summaries.
                   </p>
                 </>
@@ -501,7 +557,7 @@ export function LandingPage({ onStart }: LandingPageProps) {
                     <li>Color blindness support and high contrast</li>
                     <li>Customizable reading experience</li>
                   </ul>
-                  <p className="text-sm text-text-tertiary mt-4">
+                  <p className="text-sm text-gray-400 mt-4">
                     <strong>How to use:</strong> Upload a PDF, then click the Access panel in the right sidebar to customize your reading experience.
                   </p>
                 </>
@@ -515,7 +571,7 @@ export function LandingPage({ onStart }: LandingPageProps) {
                     <li>Automatic highlighting of key sections</li>
                     <li>Personalized based on your persona and job</li>
                   </ul>
-                  <p className="text-sm text-text-tertiary mt-4">
+                  <p className="text-sm text-gray-400 mt-4">
                     <strong>How to use:</strong> Upload a PDF and set your role - highlights will appear automatically as you read.
                   </p>
                 </>
@@ -523,13 +579,13 @@ export function LandingPage({ onStart }: LandingPageProps) {
               
               {showFeatureDemo === 'progress' && (
                 <>
-                  <p>Reading Progress helps you track your document consumption and stay organized.</p>
+                  <p>Progress Analytics helps you track your document consumption and stay organized.</p>
                   <ul className="list-disc list-inside space-y-2 ml-4">
                     <li>Track reading time and progress</li>
                     <li>Monitor completion across multiple documents</li>
                     <li>Set reading goals and milestones</li>
                   </ul>
-                  <p className="text-sm text-text-tertiary mt-4">
+                  <p className="text-sm text-gray-400 mt-4">
                     <strong>How to use:</strong> Progress is tracked automatically as you read through your uploaded documents.
                   </p>
                 </>
@@ -543,7 +599,7 @@ export function LandingPage({ onStart }: LandingPageProps) {
                     <li>Automatic theme switching</li>
                     <li>Customizable color schemes</li>
                   </ul>
-                  <p className="text-sm text-text-tertiary mt-4">
+                  <p className="text-sm text-gray-400 mt-4">
                     <strong>How to use:</strong> Click the theme toggle button in the top navigation bar to switch between themes.
                   </p>
                 </>
@@ -553,7 +609,7 @@ export function LandingPage({ onStart }: LandingPageProps) {
             <div className="mt-6 flex gap-3">
               <Button
                 onClick={() => setShowFeatureDemo(null)}
-                className="flex-1"
+                className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500"
               >
                 Got it!
               </Button>
@@ -561,9 +617,9 @@ export function LandingPage({ onStart }: LandingPageProps) {
                 variant="outline"
                 onClick={() => {
                   setShowFeatureDemo(null);
-                  // Focus on the upload section
                   document.getElementById('upload-section')?.scrollIntoView({ behavior: 'smooth' });
                 }}
+                className="border-white/20 text-white hover:bg-white/10"
               >
                 Start Reading
               </Button>
@@ -573,9 +629,15 @@ export function LandingPage({ onStart }: LandingPageProps) {
       )}
 
       {/* Footer */}
-      <footer className="relative z-10 p-6 border-t border-border-subtle bg-surface-elevated/50">
-        <div className="max-w-6xl mx-auto text-center text-sm text-text-secondary">
-          <p>Built for intelligent reading • Powered by AI • Accessible by design</p>
+      <footer className="relative z-10 p-8 border-t border-white/10 bg-black/20 backdrop-blur-xl">
+        <div className="max-w-6xl mx-auto text-center">
+          <div className="flex items-center justify-center gap-2 mb-4">
+            <Logo size="sm" showText={false} className="h-8 w-8" />
+            <span className="text-white font-semibold">Adobe+</span>
+          </div>
+          <p className="text-gray-400 text-sm">
+            Powered by advanced AI • Built for universal access • Designed for the future of reading
+          </p>
         </div>
       </footer>
     </div>

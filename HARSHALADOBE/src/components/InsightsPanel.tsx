@@ -631,27 +631,33 @@ export function InsightsPanel({
             </CardHeader>
             <CardContent className="space-y-4">
                 <div>
-                  <label className="text-sm font-medium text-foreground">Your Role/Persona</label>
+                  <label className="text-sm font-medium text-foreground">
+                    Your Role/Persona 
+                    <span className="text-xs text-muted-foreground ml-1">(Optional)</span>
+                  </label>
                   <input
                     type="text"
                     value={persona}
                     onChange={(e) => setPersona(e.target.value)}
-                    placeholder="e.g., Software Engineer, Student, Researcher"
+                    placeholder="e.g., Software Engineer, Student, Researcher (defaults to 'Student')"
                     className="w-full mt-1 px-3 py-2 border border-border rounded-md bg-background"
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-foreground">Job to be Done</label>
+                  <label className="text-sm font-medium text-foreground">
+                    Job to be Done 
+                    <span className="text-xs text-muted-foreground ml-1">(Optional)</span>
+                  </label>
                   <input
                     type="text"
                     value={jobToBeDone}
                     onChange={(e) => setJobToBeDone(e.target.value)}
-                    placeholder="e.g., Understand design patterns, Research cloud computing"
+                    placeholder="e.g., Understand design patterns, Research cloud computing (defaults to 'Read')"
                     className="w-full mt-1 px-3 py-2 border border-border rounded-md bg-background"
                   />
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Set your role and goal to get personalized insights from your document library.
+                  Set your role and goal to get personalized insights from your document library. (Defaults: Student / Read)
                 </p>
             </CardContent>
           </Card>

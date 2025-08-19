@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Separator } from '@/components/ui/separator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { DocumentOutline } from './DocumentOutline';
 import { 
@@ -26,7 +27,10 @@ import {
   Target,
   Zap,
   Users,
-  Filter
+  Filter,
+  Library,
+  Compass,
+  Download
 } from 'lucide-react';
 
 interface OutlineItem {
@@ -89,9 +93,13 @@ export function EnhancedLeftPanel({
   onQuickAction,
   documentAnalysisStatus = {}
 }: EnhancedLeftPanelProps) {
+  // Set default values for persona and jobToBeDone
+  const currentPersona = persona || 'student';
+  const currentJobToBeDone = jobToBeDone || 'read';
   const [searchTerm, setSearchTerm] = useState('');
+  const [activeTab, setActiveTab] = useState('explore');
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
-    new Set(['outline', 'session', 'documents'])
+    new Set(['outline', 'actions'])
   );
   const [expandedOutlineItems, setExpandedOutlineItems] = useState<Set<string>>(new Set());
   const [readingSession, setReadingSession] = useState<ReadingSession>({
@@ -102,6 +110,25 @@ export function EnhancedLeftPanel({
     progress: 0
   });
   const { toast } = useToast();
+
+  // Debounce utility function
+  const debounce = useCallback((func: Function, delay: number) => {
+    let timeoutId: NodeJS.Timeout;
+    return (...args: any[]) => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => func(...args), delay);
+    };
+  }, []);
+
+  // Debounced search handler
+  const debouncedSearch = useCallback(
+    debounce((value: string) => {
+      if (value.trim() !== '') {
+        setSearchTerm(value);
+      }
+    }, 250),
+    []
+  );
 
   // Update reading session when page changes
   useEffect(() => {
@@ -193,8 +220,8 @@ export function EnhancedLeftPanel({
     },
     {
       id: 'strategic',
-      label: 'Get Recommendations',
-      description: 'AI-powered reading suggestions',
+      label: 'AI Recommendations',
+      description: 'Get personalized reading suggestions',
       icon: Target,
       action: () => onQuickAction?.('strategic'),
       shortcut: 'Ctrl+R'
@@ -214,6 +241,22 @@ export function EnhancedLeftPanel({
       icon: Eye,
       action: () => onQuickAction?.('insights'),
       shortcut: 'Ctrl+I'
+    },
+    {
+      id: 'summary',
+      label: 'Document Summary',
+      description: 'Get AI-generated document summary',
+      icon: FileText,
+      action: () => onQuickAction?.('summary'),
+      shortcut: 'Ctrl+S'
+    },
+    {
+      id: 'export',
+      label: 'Export Notes',
+      description: 'Export your notes and highlights',
+      icon: Download,
+      action: () => onQuickAction?.('export'),
+      shortcut: 'Ctrl+E'
     }
   ];
 
@@ -298,43 +341,50 @@ export function EnhancedLeftPanel({
       <div key={item.id} className="w-full">
         <div 
           className={`
-            flex items-center gap-2 py-2 px-2 rounded cursor-pointer transition-colors
+            flex items-center gap-3 py-3 px-3 rounded-lg cursor-pointer transition-all duration-200
             ${isActive 
-              ? 'bg-blue-50 border-l-2 border-l-blue-500 text-blue-900' 
-              : 'hover:bg-gray-50 dark:hover:bg-gray-800'
+              ? 'bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-l-4 border-l-blue-500 text-blue-900 dark:text-blue-100 shadow-sm' 
+              : 'hover:bg-slate-50 dark:hover:bg-slate-700/50 border-l-4 border-l-transparent'
             }
-            ${isGeneratedItem ? 'border-l border-l-gray-300' : ''}
+            ${isGeneratedItem ? 'border-l-4 border-l-slate-300 dark:border-l-slate-600' : ''}
           `}
-          style={{ paddingLeft }}
+          style={{ paddingLeft: `${paddingLeft + 8}px` }}
           onClick={() => handleOutlineClick(item)}
         >
           {hasChildren && (
             <Button
               variant="ghost"
               size="sm"
-              className="h-4 w-4 p-0"
+              className="h-5 w-5 p-0 hover:bg-slate-200 dark:hover:bg-slate-600 rounded"
               onClick={(e) => {
                 e.stopPropagation();
                 toggleOutlineItem(item.id);
               }}
             >
               {isExpanded ? 
-                <ChevronDown className="h-3 w-3" /> : 
-                <ChevronRight className="h-3 w-3" />
+                <ChevronDown className="h-3 w-3 text-slate-600 dark:text-slate-400" /> : 
+                <ChevronRight className="h-3 w-3 text-slate-600 dark:text-slate-400" />
               }
             </Button>
           )}
-          {!hasChildren && <div className="w-4" />}
+          {!hasChildren && <div className="w-5" />}
           
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between">
-              <span className={`text-sm truncate ${
-                depth === 0 ? 'font-medium' : 
-                depth === 1 ? 'font-normal' : 'text-gray-600'
-              } ${isGeneratedItem ? 'italic text-gray-600' : ''}`}>
+              <span 
+                className={`text-sm overflow-hidden whitespace-nowrap text-ellipsis ${
+                  depth === 0 ? 'font-semibold' : 
+                  depth === 1 ? 'font-medium' : 'font-normal text-slate-600 dark:text-slate-400'
+                } ${isGeneratedItem ? 'italic text-slate-500 dark:text-slate-400' : ''}`}
+                title={item.title}
+              >
                 {item.title}
               </span>
-              <Badge variant="outline" className="text-xs ml-2">
+              <Badge variant="outline" className={`text-xs ml-2 flex-shrink-0 ${
+                isActive 
+                  ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700' 
+                  : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-600'
+              }`}>
                 {item.page}
               </Badge>
             </div>
@@ -351,262 +401,281 @@ export function EnhancedLeftPanel({
   };
 
   const getPersonaIcon = (persona?: string) => {
-    switch (persona?.toLowerCase()) {
+    const personaType = persona?.toLowerCase() || 'student';
+    switch (personaType) {
       case 'student': return '🎓';
       case 'researcher': return '🔬';
       case 'professional': return '💼';
       case 'expert': return '👨‍🏫';
-      default: return '👤';
+      default: return '🎓'; // Default to student icon
     }
   };
 
-  return (
-    <div className="flex flex-col h-full bg-background border-r border-border-subtle">
-      {/* Header */}
-      <div className="flex-shrink-0 p-4 border-b border-border-subtle">
-        <div className="flex items-center gap-2 mb-4">
-          <FileText className="h-5 w-5 text-blue-600" />
-          <h3 className="font-semibold text-text-primary">Navigation</h3>
+    return (
+    <div className="flex flex-col h-full min-h-0 overflow-hidden bg-gradient-to-b from-slate-50 to-white dark:from-slate-900 dark:to-slate-800 border-r border-slate-200 dark:border-slate-700">
+      {/* Sidebar Header - Fixed */}
+      <div className="flex-shrink-0 flex flex-col">
+        {/* Tabbed Interface */}
+        <div className="p-4 border-b border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList 
+              className="grid w-full grid-cols-2 bg-slate-100 dark:bg-slate-700"
+              role="tablist"
+            >
+              <TabsTrigger 
+                value="explore" 
+                className="flex items-center gap-2 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 data-[state=active]:shadow-sm focus-visible:outline-2 focus-visible:outline-blue-500 focus-visible:outline-offset-2"
+                role="tab"
+                aria-selected={activeTab === 'explore'}
+                aria-label="Explore document tools and navigation"
+              >
+                <Compass className="h-4 w-4" />
+                Explore
+              </TabsTrigger>
+              <TabsTrigger 
+                value="library" 
+                className="flex items-center gap-2 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 data-[state=active]:shadow-sm focus-visible:outline-2 focus-visible:outline-blue-500 focus-visible:outline-offset-2"
+                role="tab"
+                aria-selected={activeTab === 'library'}
+                aria-label="Browse document library"
+              >
+                <Library className="h-4 w-4" />
+                Library
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
 
-        {/* Current Session Info */}
-        {persona && (
-          <Card className="mb-4">
-            <CardContent className="p-3">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-lg">{getPersonaIcon(persona)}</span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium capitalize">{persona} Mode</p>
-                  <p className="text-xs text-gray-600 truncate">{jobToBeDone}</p>
-                </div>
-              </div>
-              <div className="flex items-center justify-between text-xs text-gray-500">
-                <span>Page {readingSession.currentPage} of {readingSession.totalPages}</span>
-                <span>{readingSession.progress}%</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-1.5 mt-2">
-                <div 
-                  className="bg-blue-600 h-1.5 rounded-full transition-all" 
-                  style={{ width: `${readingSession.progress}%` }}
-                />
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Search */}
-        <div className="relative mb-3">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-          <Input
-            placeholder="Search sections..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 text-sm"
-          />
+        {/* Search Bar - Fixed */}
+        <div className="p-4 border-b border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-800/50">
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
+            <Input
+              placeholder="Search sections..."
+              value={searchTerm}
+              onChange={(e) => debouncedSearch(e.target.value)}
+              className="pl-11 text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500/20 dark:focus:ring-blue-400/20 rounded-lg shadow-sm focus-visible:outline-2 focus-visible:outline-blue-500 focus-visible:outline-offset-2"
+              aria-label="Search document sections"
+            />
+          </div>
         </div>
       </div>
 
-      <ScrollArea className="flex-1">
-        <div className="p-4 space-y-4">
-          {/* Quick Actions */}
-          <Collapsible 
-            open={expandedSections.has('actions')}
-            onOpenChange={() => toggleSection('actions')}
-          >
-            <CollapsibleTrigger asChild>
-              <Button variant="ghost" className="w-full justify-between p-0 h-auto">
-                <div className="flex items-center gap-2">
-                  <Zap className="h-4 w-4" />
-                  <span className="font-medium text-sm">Quick Actions</span>
-                </div>
-                {expandedSections.has('actions') ? 
-                  <ChevronDown className="h-4 w-4" /> : 
-                  <ChevronRight className="h-4 w-4" />
-                }
-              </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="mt-3">
-              <div className="grid grid-cols-2 gap-2">
-                {quickActions.map((action) => {
-                  const Icon = action.icon;
-                  return (
-                    <Button
-                      key={action.id}
-                      variant="outline"
-                      size="sm"
-                      onClick={action.action}
-                      className="flex flex-col gap-1 h-auto p-3"
-                      title={action.description}
-                    >
-                      <Icon className="h-4 w-4" />
-                      <span className="text-xs">{action.label}</span>
-                    </Button>
-                  );
-                })}
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
+      {/* Sidebar Body - Scrollable */}
+      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
+          {/* Explore Tab */}
+          <TabsContent value="explore" className="flex-1 flex flex-col mt-0 min-h-0">
+            <div className="p-4 space-y-4 flex-1 min-h-0">
+              {/* Document Outline */}
+              <Collapsible 
+                open={expandedSections.has('outline')}
+                onOpenChange={() => toggleSection('outline')}
+              >
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" className="w-full justify-between p-0 h-auto hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-gradient-to-br from-green-400 to-emerald-500 rounded-lg">
+                        <List className="h-4 w-4 text-white" />
+                      </div>
+                      <div className="text-left">
+                        <span className="font-semibold text-sm text-slate-900 dark:text-slate-100">Document Outline</span>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Sections & structure</p>
+                      </div>
+                    </div>
+                    {expandedSections.has('outline') ? 
+                      <ChevronDown className="h-4 w-4 text-slate-500" /> : 
+                      <ChevronRight className="h-4 w-4 text-slate-500" />
+                    }
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="mt-3">
+                  <div className="h-80 overflow-hidden bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-600 shadow-sm">
+                    <DocumentOutline
+                      documents={documents}
+                      outline={currentDocument?.outline}
+                      currentDocument={currentDocument}
+                      currentPage={currentPage}
+                      onItemClick={(item) => {
+                        onPageNavigate?.(item.page);
+                        onSectionNavigate?.(item.page, item.title);
+                      }}
+                      onDocumentSwitch={(document) => {
+                        onDocumentChange?.(document);
+                      }}
+                      documentAnalysisStatus={documentAnalysisStatus}
+                    />
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
 
-          {/* Document Outline */}
-          <Collapsible 
-            open={expandedSections.has('outline')}
-            onOpenChange={() => toggleSection('outline')}
-          >
-            <CollapsibleTrigger asChild>
-              <Button variant="ghost" className="w-full justify-between p-0 h-auto">
-                <div className="flex items-center gap-2">
-                  <List className="h-4 w-4" />
-                  <span className="font-medium text-sm">Document Outline</span>
-                </div>
-                {expandedSections.has('outline') ? 
-                  <ChevronDown className="h-4 w-4" /> : 
-                  <ChevronRight className="h-4 w-4" />
-                }
-              </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="mt-3">
-              <div className="h-96 overflow-hidden">
-                <DocumentOutline
-                  documents={documents}
-                  outline={currentDocument?.outline}
-                  currentDocument={currentDocument}
-                  currentPage={currentPage}
-                  onItemClick={(item) => {
-                    onPageNavigate?.(item.page);
-                    onSectionNavigate?.(item.page, item.title);
-                  }}
-                  onDocumentSwitch={(document) => {
-                    onDocumentChange?.(document);
-                  }}
-                  documentAnalysisStatus={documentAnalysisStatus}
-                />
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
-
-          {/* Reading Session */}
-          <Collapsible 
-            open={expandedSections.has('session')}
-            onOpenChange={() => toggleSection('session')}
-          >
-            <CollapsibleTrigger asChild>
-              <Button variant="ghost" className="w-full justify-between p-0 h-auto">
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4" />
-                  <span className="font-medium text-sm">Reading Session</span>
-                </div>
-                {expandedSections.has('session') ? 
-                  <ChevronDown className="h-4 w-4" /> : 
-                  <ChevronRight className="h-4 w-4" />
-                }
-              </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="mt-3">
-              <Card>
-                <CardContent className="p-3 space-y-3">
-                  <div className="flex items-center justify-between text-sm">
-                    <span>Reading Time</span>
-                    <span className="font-mono">
-                      {Math.floor((Date.now() - readingSession.startTime) / 60000)}m
-                    </span>
+              {/* Quick Actions */}
+              <Collapsible 
+                open={expandedSections.has('actions')}
+                onOpenChange={() => toggleSection('actions')}
+              >
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" className="w-full justify-between p-0 h-auto hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-lg shadow-sm">
+                        <Zap className="h-4 w-4 text-white" />
+                      </div>
+                      <div className="text-left">
+                        <span className="font-semibold text-sm text-slate-900 dark:text-slate-100">Quick Actions</span>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Essential tools & shortcuts</p>
+                      </div>
+                    </div>
+                    {expandedSections.has('actions') ? 
+                      <ChevronDown className="h-4 w-4 text-slate-500" /> : 
+                      <ChevronRight className="h-4 w-4 text-slate-500" />
+                    }
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="mt-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    {quickActions.map((action) => {
+                      const Icon = action.icon;
+                      const getActionColor = (actionId: string) => {
+                        switch (actionId) {
+                          case 'bookmark': return 'from-blue-400 to-blue-600';
+                          case 'strategic': return 'from-purple-400 to-purple-600';
+                          case 'highlights': return 'from-yellow-400 to-orange-500';
+                          case 'insights': return 'from-green-400 to-emerald-600';
+                          case 'summary': return 'from-indigo-400 to-indigo-600';
+                          case 'export': return 'from-red-400 to-red-600';
+                          default: return 'from-slate-400 to-slate-600';
+                        }
+                      };
+                      
+                      return (
+                        <Button
+                          key={action.id}
+                          variant="outline"
+                          size="sm"
+                          onClick={action.action}
+                          className="group flex flex-col gap-3 h-auto p-4 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-600 hover:border-blue-300 dark:hover:border-blue-500 hover:bg-gradient-to-br hover:from-blue-50 hover:to-indigo-50 dark:hover:from-blue-900/10 dark:hover:to-indigo-900/10 transition-all duration-300 rounded-xl shadow-sm hover:shadow-md hover:-translate-y-0.5"
+                          title={action.description}
+                        >
+                          <div className={`p-3 bg-gradient-to-br ${getActionColor(action.id)} rounded-xl shadow-sm group-hover:shadow-md transition-all duration-300 group-hover:scale-110`}>
+                            <Icon className="h-5 w-5 text-white" />
+                          </div>
+                          <div className="flex flex-col gap-1 min-w-0">
+                            <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 overflow-hidden whitespace-nowrap text-ellipsis" title={action.label}>
+                              {action.label}
+                            </span>
+                            {action.shortcut && (
+                              <span className="text-xs text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded-md text-center flex-shrink-0 font-mono" title={action.shortcut}>
+                                {action.shortcut}
+                              </span>
+                            )}
+                          </div>
+                        </Button>
+                      );
+                    })}
                   </div>
                   
-                  <div className="flex items-center justify-between text-sm">
-                    <span>Progress</span>
-                    <span>{readingSession.progress}%</span>
-                  </div>
-
-                  <Separator />
-
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium">Bookmarks</span>
-                      <Badge variant="secondary" className="text-xs">
-                        {readingSession.bookmarks.length}
-                      </Badge>
+                  {/* Quick Actions Info */}
+                  <div className="mt-4 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg border border-blue-200 dark:border-blue-700">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="p-1 bg-blue-100 dark:bg-blue-800 rounded-lg">
+                        <Zap className="h-3 w-3 text-blue-600 dark:text-blue-400" />
+                      </div>
+                      <span className="text-xs font-medium text-blue-700 dark:text-blue-300">Pro Tips</span>
                     </div>
-                    {readingSession.bookmarks.length > 0 ? (
-                      <div className="space-y-1">
-                        {readingSession.bookmarks.map((page) => (
-                          <div key={page} className="flex items-center justify-between">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => onPageNavigate?.(page)}
-                              className="flex-1 justify-start h-6 px-2"
-                            >
-                              <Bookmark className="h-3 w-3 mr-2" />
-                              <span className="text-xs">Page {page}</span>
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => removeBookmark(page)}
-                              className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
-                            >
-                              ×
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-xs text-gray-500 text-center py-2">
-                        No bookmarks yet
-                      </p>
-                    )}
+                    <p className="text-xs text-blue-600 dark:text-blue-400">
+                      Use keyboard shortcuts for faster access. Hover over any action to see its description.
+                    </p>
                   </div>
-                </CardContent>
-              </Card>
-            </CollapsibleContent>
-          </Collapsible>
+                </CollapsibleContent>
+              </Collapsible>
+            </div>
+          </TabsContent>
 
-          {/* Documents */}
-          {documents.length > 1 && (
-            <Collapsible 
-              open={expandedSections.has('documents')}
-              onOpenChange={() => toggleSection('documents')}
-            >
-              <CollapsibleTrigger asChild>
-                <Button variant="ghost" className="w-full justify-between p-0 h-auto">
-                  <div className="flex items-center gap-2">
-                    <BookOpen className="h-4 w-4" />
-                    <span className="font-medium text-sm">Documents ({documents.length})</span>
+          {/* Library Tab */}
+          <TabsContent value="library" className="flex-1 flex flex-col mt-0 min-h-0">
+            <div className="p-4 space-y-4 flex-1 min-h-0">
+              {/* Documents */}
+              {documents.length > 0 ? (
+                <div className="space-y-3 flex flex-col min-h-0">
+                  <div className="flex items-center gap-2 mb-4 flex-shrink-0">
+                    <div className="p-2 bg-gradient-to-br from-indigo-400 to-blue-500 rounded-lg">
+                      <BookOpen className="h-4 w-4 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-sm text-slate-900 dark:text-slate-100">Document Library</h3>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">{documents.length} document{documents.length !== 1 ? 's' : ''} available</p>
+                    </div>
                   </div>
-                  {expandedSections.has('documents') ? 
-                    <ChevronDown className="h-4 w-4" /> : 
-                    <ChevronRight className="h-4 w-4" />
-                  }
-                </Button>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="mt-3">
-                <div className="space-y-2">
-                  {documents.map((doc) => (
-                    <Button
-                      key={doc.id}
-                      variant={currentDocument?.id === doc.id ? "default" : "ghost"}
-                      size="sm"
-                      onClick={() => handleDocumentChange(doc)}
-                      className="w-full justify-start h-auto p-2"
-                    >
-                      <div className="flex-1 text-left">
-                        <div className="text-sm font-medium truncate">
-                          {doc.name}
+                  
+                  <div className="space-y-3 flex-1 min-h-0">
+                    {documents.map((doc) => (
+                      <Button
+                        key={doc.id}
+                        variant={currentDocument?.id === doc.id ? "default" : "ghost"}
+                        size="sm"
+                        onClick={() => handleDocumentChange(doc)}
+                        className={`w-full justify-start h-auto p-4 transition-all duration-200 ${
+                          currentDocument?.id === doc.id 
+                            ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg' 
+                            : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 hover:border-blue-300 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20'
+                        } rounded-lg shadow-sm`}
+                        title={doc.name}
+                      >
+                        <div className="flex-1 text-left min-w-0">
+                          <div className={`text-sm font-semibold overflow-hidden whitespace-nowrap text-ellipsis ${
+                            currentDocument?.id === doc.id ? 'text-white' : 'text-slate-700 dark:text-slate-300'
+                          }`}>
+                            {doc.name}
+                          </div>
+                          <div className={`text-xs overflow-hidden whitespace-nowrap text-ellipsis ${
+                            currentDocument?.id === doc.id ? 'text-blue-100' : 'text-slate-500 dark:text-slate-400'
+                          }`}>
+                            {doc.outline?.length || 0} sections
+                          </div>
                         </div>
-                        <div className="text-xs text-gray-500">
-                          {doc.outline?.length || 0} sections
-                        </div>
-                      </div>
-                      {currentDocument?.id === doc.id && (
-                        <ArrowRight className="h-3 w-3 ml-2" />
-                      )}
-                    </Button>
-                  ))}
+                        {currentDocument?.id === doc.id && (
+                          <div className="p-1 bg-white/20 rounded-full flex-shrink-0">
+                            <ArrowRight className="h-3 w-3 text-white" />
+                          </div>
+                        )}
+                      </Button>
+                    ))}
+                  </div>
                 </div>
-              </CollapsibleContent>
-            </Collapsible>
-          )}
+              ) : (
+                <div className="text-center py-12">
+                  <BookOpen className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                  <p className="text-sm text-slate-500 dark:text-slate-400">No documents available</p>
+                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Upload documents to get started</p>
+                </div>
+              )}
+            </div>
+          </TabsContent>
+        </Tabs>
+      </div>
+
+      {/* Footer - Reading Progress - Fixed */}
+      <div className="flex-shrink-0 p-4 border-t border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
+        <div className="flex items-center gap-3 mb-2">
+          <div className="p-1.5 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg">
+            <span className="text-sm text-white">{getPersonaIcon(currentPersona)}</span>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-medium capitalize text-slate-900 dark:text-slate-100 overflow-hidden whitespace-nowrap text-ellipsis">{currentPersona} Mode</p>
+            <p className="text-xs text-slate-600 dark:text-slate-400 overflow-hidden whitespace-nowrap text-ellipsis" title={currentJobToBeDone}>{currentJobToBeDone}</p>
+          </div>
         </div>
-      </ScrollArea>
+        <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-400 mb-2">
+          <span>Page {readingSession.currentPage} of {readingSession.totalPages}</span>
+          <span className="font-semibold">{readingSession.progress}%</span>
+        </div>
+        <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-1.5 overflow-hidden">
+          <div 
+            className="bg-gradient-to-r from-blue-500 to-indigo-600 h-1.5 rounded-full transition-all duration-300 ease-out" 
+            style={{ width: `${readingSession.progress}%` }}
+          />
+        </div>
+      </div>
     </div>
   );
 }

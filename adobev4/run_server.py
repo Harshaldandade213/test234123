@@ -10,7 +10,7 @@ import sys
 
 def main():
     """Start the FastAPI server"""
-    print("🚀 Starting Document Analysis & Podcast Generation API Server")
+    print("🚀 Starting Adobe+ Document Analysis & Podcast Generation API Server")
     print("=" * 60)
     
     # Check if required directories exist

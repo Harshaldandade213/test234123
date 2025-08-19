@@ -31,7 +31,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 # Configure FastAPI app
 app = FastAPI(
-    title="Document Analysis & Podcast Generation API",
+    title="Adobe+ Document Analysis & Podcast Generation API",
     description="A comprehensive API for document management, analysis, and podcast generation",
     version="1.0.0"
 )

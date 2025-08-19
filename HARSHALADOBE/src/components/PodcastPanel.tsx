@@ -465,9 +465,23 @@ export function PodcastPanel({
             </h4>
           </div>
           
+          {/* Example Queries */}
+          <div className="bg-surface-elevated/50 rounded-lg p-3 border border-border-subtle">
+            <p className="text-xs text-text-secondary mb-2 font-medium">💡 Example queries you can paste:</p>
+            <div className="space-y-1">
+              <div className="text-xs text-text-tertiary">• "Explain quantum computing in simple terms"</div>
+              <div className="text-xs text-text-tertiary">• "What are the latest developments in renewable energy?"</div>
+              <div className="text-xs text-text-tertiary">• "How does machine learning impact healthcare?"</div>
+              <div className="text-xs text-text-tertiary">• "Discuss the future of remote work"</div>
+              <div className="text-xs text-text-tertiary">• "What are the environmental impacts of electric vehicles?"</div>
+            </div>
+          </div>
+          
           <div className="space-y-2">
             <Textarea
-              placeholder="Enter your query (e.g., 'Alien', 'Space exploration', 'Technology trends')... (Auto-generates when you paste or type substantial text)"
+              placeholder="Paste or type your query here (e.g., 'Alien', 'Space exploration', 'Technology trends', 'Climate change impact', 'AI in healthcare')... 
+
+💡 Tip: Paste any text and it will automatically generate a podcast!"
               value={customQuery}
               onChange={(e) => {
                 const newValue = e.target.value;
@@ -506,35 +520,56 @@ export function PodcastPanel({
                   }
                 }, 100);
               }}
-              className="min-h-[80px] resize-none"
+              className="min-h-[100px] resize-none text-sm"
               disabled={isGeneratingFromQuery}
             />
             
             {/* Auto-generation indicator */}
             {customQuery.trim().length >= 10 && !isGeneratingFromQuery && (
-              <div className="flex items-center gap-2 text-xs text-blue-600">
-                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                <span>Ready to auto-generate podcast</span>
+              <div className="flex items-center gap-2 text-xs text-green-600 bg-green-50 dark:bg-green-900/20 px-3 py-2 rounded-lg border border-green-200 dark:border-green-800">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <span className="font-medium">✨ Ready to auto-generate podcast!</span>
               </div>
             )}
             
-            <Button
-              onClick={handleGenerateFromQuery}
-              disabled={isGeneratingFromQuery || !customQuery.trim()}
-              className="w-full gap-2"
-            >
-              {isGeneratingFromQuery ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Generating Podcast...
-                </>
-              ) : (
-                <>
-                  <Send className="h-4 w-4" />
-                  Generate Podcast from Query
-                </>
+            {customQuery.trim().length > 0 && customQuery.trim().length < 10 && (
+              <div className="flex items-center gap-2 text-xs text-orange-600 bg-orange-50 dark:bg-orange-900/20 px-3 py-2 rounded-lg border border-orange-200 dark:border-orange-800">
+                <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                <span>Type or paste more text to auto-generate (minimum 10 characters)</span>
+              </div>
+            )}
+            
+            <div className="flex gap-2">
+              <Button
+                onClick={handleGenerateFromQuery}
+                disabled={isGeneratingFromQuery || !customQuery.trim()}
+                className="flex-1 gap-2"
+              >
+                {isGeneratingFromQuery ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Generating Podcast...
+                  </>
+                ) : (
+                  <>
+                    <Send className="h-4 w-4" />
+                    {customQuery.trim().length >= 10 ? 'Generate Podcast Now' : 'Generate Podcast from Query'}
+                  </>
+                )}
+              </Button>
+              
+              {customQuery.trim() && (
+                <Button
+                  variant="outline"
+                  onClick={() => setCustomQuery('')}
+                  disabled={isGeneratingFromQuery}
+                  className="px-3"
+                  title="Clear query"
+                >
+                  ✕
+                </Button>
               )}
-            </Button>
+            </div>
           </div>
         </div>
 

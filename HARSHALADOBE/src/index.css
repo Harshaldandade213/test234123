@@ -129,15 +129,34 @@
     --gradient-subtle: linear-gradient(180deg, hsl(var(--background)), hsl(var(--background-secondary)));
     --gradient-accent: linear-gradient(135deg, hsl(var(--brand-accent)), hsl(var(--brand-primary)));
     
+    /* Adobe+ Logo Colors */
+    --aplus-warm: #ff7a3d;
+    --aplus-mid: #ff4fb0;
+    --aplus-cool: #5b6cff;
+    
     /* Animation Timing */
     --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
     --transition-normal: 300ms cubic-bezier(0.4, 0, 0.2, 1);
     --transition-slow: 500ms cubic-bezier(0.4, 0, 0.2, 1);
     
-    /* Component Tokens */
-    --radius: 0.5rem;                    /* 8px refined corners */
-    --radius-lg: 0.75rem;                /* 12px for cards */
-    --radius-xl: 1rem;                   /* 16px for modals */
+      /* Component Tokens */
+  --radius: 0.5rem;                    /* 8px refined corners */
+  --radius-lg: 0.75rem;                /* 12px for cards */
+  --radius-xl: 1rem;                   /* 16px for modals */
+
+  /* Adobe+ Logo Responsive Sizing */
+  .logo {
+    width: var(--logo-size);
+    height: var(--logo-size);
+    display: block;
+  }
+  
+  @media (max-width: 960px) {
+    .logo {
+      width: var(--logo-size-compact);
+      height: var(--logo-size-compact);
+    }
+  }
 
     --sidebar-background: 0 0% 98%;
 
@@ -154,6 +173,10 @@
     --sidebar-border: 220 13% 91%;
 
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* Adobe+ Logo Sizing */
+    --logo-size: 24px;
+    --logo-size-compact: 20px;
 
     /* Accessibility Variables - Default Values */
     --accessibility-font-size: 16px;
@@ -584,5 +607,48 @@
   .smooth-focus:focus-visible {
     outline: 2px solid hsl(var(--brand-primary));
     outline-offset: 2px;
+  }
+
+  /* Enhanced hover effects */
+  .hover-scale-102 {
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .hover-scale-102:hover {
+    transform: scale(1.02);
+  }
+
+  .hover-scale-105 {
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .hover-scale-105:hover {
+    transform: scale(1.05);
+  }
+
+  .hover-scale-110 {
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .hover-scale-110:hover {
+    transform: scale(1.1);
+  }
+
+  /* Enhanced shadows */
+  .shadow-xl {
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  }
+
+  /* Glass morphism effects */
+  .glass-morphism {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+
+  .glass-morphism-dark {
+    background: rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
   }
 }
