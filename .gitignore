@@ -186,6 +186,14 @@ audio/
 index/
 index_backup/
 
+# Large binary files and executables
+ffmpeg/
+*/ffmpeg/
+*.exe
+*.dll
+*.so
+*.dylib
+
 # Test output files
 test_*.py
 debug_*.py
