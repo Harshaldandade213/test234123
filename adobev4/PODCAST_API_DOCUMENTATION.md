@@ -4,7 +4,7 @@
 
 The Podcast API provides two powerful endpoints for generating and downloading AI-powered podcasts using Azure TTS (Text-to-Speech). The API integrates with your document analysis system to create engaging podcast content based on your queries and indexed documents.
 
-## Features
+## Featur
 
 - **Azure TTS Integration**: High-quality neural voice synthesis
 - **Two-Speaker Dialogue**: Alex (host) and Dr. Sharma (expert) personas
