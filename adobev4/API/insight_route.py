@@ -1,16 +1,18 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from adobev4.Services.insight_service import generate_insights_gemini_flash
 import os
 
-app = FastAPI()
+# Direct import since we're running from adobev4 directory
+from Services.insight_service import generate_insights_gemini_flash
+
+router = APIRouter()
 
 class InsightRequest(BaseModel):
     query: str
     passages: list[dict]
     thinking_budget: int | None = None
 
-@app.post("/insights")
+@router.post("/insights")
 def insights_endpoint(req: InsightRequest):
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:

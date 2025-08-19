@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  harshaladobe-app:
+    build: .
+    container_name: harshaladobe-full-stack
+    ports:
+      - "3000:3000"  # Frontend
+      - "8000:8000"  # HARSHALADOBE Backend
+      - "8080:8080"  # AdobeV4 Backend
+    environment:
+      # Google API Configuration
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      
+      # Azure Speech Services Configuration
+      - AZURE_SPEECH_KEY=${AZURE_SPEECH_KEY}
+      - AZURE_SPEECH_REGION=${AZURE_SPEECH_REGION}
+      
+      # AWS Configuration (optional)
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_REGION=${AWS_REGION}
+      
+      # Application Configuration
+      - TTS_PROVIDER=azure
+      - HOST=0.0.0.0
+      - PORT=8080
+      - DEBUG=true
+      
+      # HARSHALADOBE Backend Configuration
+      - HARSHALADOBE_PORT=8000
+      
+      # Frontend Configuration
+      - VITE_API_URL=http://localhost:8000
+      - VITE_ADOBEV4_URL=http://localhost:8080
+      
+      # Development Configuration
+      - DEVELOPMENT_MODE=true
+      - VERBOSE_LOGGING=false
+    volumes:
+      - harshaladobe_data:/app/harshaladobe-backend/audio_cache
+      - harshaladobe_data:/app/harshaladobe-backend/uploads
+      - harshaladobe_data:/app/harshaladobe-backend/documents
+      - adobev4_data:/app/adobev4-backend/audio
+      - adobev4_data:/app/adobev4-backend/documents
+      - adobev4_data:/app/adobev4-backend/index
+    networks:
+      - harshaladobe-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  harshaladobe_data:
+    driver: local
+  adobev4_data:
+    driver: local
+
+networks:
+  harshaladobe-network:
+    driver: bridge

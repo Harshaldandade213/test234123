@@ -545,6 +545,12 @@ def generate_podcast_audio(script_text, output_filename="podcast_output.mp3"):
                     # For intros or sound effects text, use a neutral voice or skip
                     continue
                 
+                # Sanitize the text for TTS
+                speaker_text = sanitize_text_for_tts(speaker_text)
+                
+                if not speaker_text:
+                    continue  # Skip if text is empty after sanitization
+                
                 # Generate audio for the line using AWS Polly
                 response = polly_client.synthesize_speech(
                     Text=speaker_text,
@@ -609,6 +615,12 @@ def generate_podcast_audio_simple(script_text, output_filename="podcast_output.m
                 else:
                     # For intros or sound effects text, use a neutral voice or skip
                     continue
+                
+                # Sanitize the text for TTS
+                speaker_text = sanitize_text_for_tts(speaker_text)
+                
+                if not speaker_text:
+                    continue  # Skip if text is empty after sanitization
                 
                 # Generate audio for the line using AWS Polly
                 response = polly_client.synthesize_speech(
@@ -711,6 +723,12 @@ def generate_podcast_audio_azure(script_text, output_filename="podcast_output.mp
 
             if not speaker_text:
                 continue
+
+            # Sanitize the text for TTS
+            speaker_text = sanitize_text_for_tts(speaker_text)
+            
+            if not speaker_text:
+                continue  # Skip if text is empty after sanitization
 
             # Create an SSML string to specify the voice
             ssml_string = f'<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="en-US">'
@@ -904,8 +922,7 @@ def combine_audio_files(audio_files, output_filename):
     
     # If both methods fail
     print("\n❌ Audio combining failed with both ffmpeg and pydub.")
-    print("Please install ffmpeg or ensure pydub is working correctly.")
-    print("Install ffmpeg: https://ffmpeg.org/download.html")
+    print("Please install ffmpeg: https://ffmpeg.org/download.html")
     print("Or install pydub: pip install pydub")
     return False
 
@@ -987,6 +1004,57 @@ def generate_podcast(query_text, output_filename="podcast_output.mp3"):
         print("\n❌ Podcast generation failed at the audio stage.")
     
     return success, audio_files
+
+def sanitize_text_for_tts(text):
+    """
+    Sanitize text for TTS by removing or replacing invalid characters.
+    
+    Args:
+        text: The text to sanitize
+        
+    Returns:
+        Sanitized text safe for TTS
+    """
+    if not text:
+        return ""
+    
+    # Remove or replace problematic characters
+    sanitized = text
+    
+    # Replace problematic characters with safe alternatives
+    replacements = {
+        ',': ' ',  # Replace commas with spaces
+        ';': ' ',  # Replace semicolons with spaces
+        '"': '',   # Remove quotes
+        "'": '',   # Remove single quotes
+        '`': '',   # Remove backticks
+        '\\': '',  # Remove backslashes
+        '/': ' ',  # Replace slashes with spaces
+        '|': ' ',  # Replace pipes with spaces
+        '<': ' ',  # Replace angle brackets with spaces
+        '>': ' ',  # Replace angle brackets with spaces
+        '{': ' ',  # Replace braces with spaces
+        '}': ' ',  # Replace braces with spaces
+        '[': ' ',  # Replace brackets with spaces
+        ']': ' ',  # Replace brackets with spaces
+        '&': ' and ',  # Replace ampersands with 'and'
+        '%': ' percent ',  # Replace percent with 'percent'
+        '#': ' number ',  # Replace hash with 'number'
+        '@': ' at ',  # Replace at with 'at'
+        '$': ' dollars ',  # Replace dollar with 'dollars'
+    }
+    
+    for char, replacement in replacements.items():
+        sanitized = sanitized.replace(char, replacement)
+    
+    # Remove multiple consecutive spaces
+    sanitized = ' '.join(sanitized.split())
+    
+    # Limit text length to prevent TTS errors
+    if len(sanitized) > 4000:
+        sanitized = sanitized[:4000] + "..."
+    
+    return sanitized.strip()
 
 # --- Main CLI ---
 if __name__ == "__main__":

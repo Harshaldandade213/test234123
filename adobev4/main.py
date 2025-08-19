@@ -12,6 +12,9 @@ from pathlib import Path
 from app import generate_podcast
 # from API import generate_insights  # This module doesn't exist, removing import
 
+# Import insight route
+from API.insight_route import router as insight_router
+
 # Import service layer functions from app.py
 from app import (
     parse_pdf, parse_docx, parse_txt, create_chunks,
@@ -49,7 +52,7 @@ app.add_middleware(
 from config import config
 
 # Configure Google Gemini API
-genai.configure(api_key=config.GOOGLE_API_KEY)
+genai.configure(api_key=config.GEMINI_API_KEY)
 
 # Initialize Gemini model for semantic analysis
 try:
@@ -434,11 +437,11 @@ class DocumentAnalysisRequest(BaseModel):
     persona: str
     job_to_be_done: str
 
-class InsightRequest(BaseModel):
-    text: str
-    persona: str
-    job_to_be_done: str
-    document_context: Optional[str] = None
+# class InsightRequest(BaseModel):
+#     text: str
+#     persona: str
+#     job_to_be_done: str
+#     document_context: Optional[str] = None
 
 class SimplifyTextRequest(BaseModel):
     text: str
@@ -839,48 +842,48 @@ async def analyze_documents(request: DocumentAnalysisRequest):
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
 
-@app.post("/insights")
-async def generate_insights(request: InsightRequest):
-    """Generate AI insights from text content"""
-    try:
-        # Use Gemini to generate insights
-        model = genai.GenerativeModel('gemini-1.5-flash-latest')
-        
-        prompt = f"""
-        Analyze the following text and generate insights based on the persona and job context.
-        
-        Text: {request.text}
-        Persona: {request.persona}
-        Job to be done: {request.job_to_be_done}
-        Document Context: {request.document_context or "None"}
-        
-        Generate insights in the following JSON format:
-        {{
-            "insights": [
-                {{
-                    "type": "takeaway|fact|contradiction|connection|info|error",
-                    "content": "insight description"
-                }}
-            ]
-        }}
-        """
-        
-        response = model.generate_content(prompt)
-        response_text = response.text.strip()
-        
-        # Parse JSON response
-        if response_text.startswith('```json'):
-            response_text = response_text[7:]
-        if response_text.startswith('```'):
-            response_text = response_text[3:]
-        if response_text.endswith('```'):
-            response_text = response_text[:-3]
-        
-        insights_result = json.loads(response_text.strip())
-        return insights_result
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to generate insights: {str(e)}")
+# @app.post("/insights")
+# async def generate_insights(request: InsightRequest):
+#     """Generate AI insights from text content"""
+#     try:
+#         # Use Gemini to generate insights
+#         model = genai.GenerativeModel('gemini-1.5-flash-latest')
+#         
+#         prompt = f"""
+#         Analyze the following text and generate insights based on the persona and job context.
+#         
+#         Text: {request.text}
+#         Persona: {request.persona}
+#         Job to be done: {request.job_to_be_done}
+#         Document Context: {request.document_context or "None"}
+#         
+#         Generate insights in the following JSON format:
+#         {{
+#             "insights": [
+#                 {{
+#                     "type": "takeaway|fact|contradiction|connection|info|error",
+#                     "content": "insight description"
+#                 }}
+#             ]
+#         }}
+#         """
+#         
+#         response = model.generate_content(prompt)
+#         response_text = response.text.strip()
+#         
+#         # Parse JSON response
+#         if response_text.startswith('```json'):
+#             response_text = response_text[7:]
+#         if response_text.startswith('```'):
+#             response_text = response_text[3:]
+#         if response_text.endswith('```'):
+#             response_text = response_text[:-3]
+#         
+#         insights_result = json.loads(response_text.strip())
+#         return insights_result
+#         
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=f"Failed to generate insights: {str(e)}")
 
 @app.post("/insights/generate")
 async def generate_insights_from_query(request: Dict[str, Any]):
@@ -948,7 +951,7 @@ async def generate_insights_from_query(request: Dict[str, Any]):
         raise HTTPException(status_code=500, detail=f"Failed to generate insights: {str(e)}")
 
 @app.post("/comprehensive-insights")
-async def generate_comprehensive_insights(request: InsightRequest):
+async def generate_comprehensive_insights(request: Dict[str, Any]):
     """Generate comprehensive insights with web facts and analysis"""
     try:
         # Use Gemini to generate comprehensive insights
@@ -957,10 +960,10 @@ async def generate_comprehensive_insights(request: InsightRequest):
         prompt = f"""
         Generate comprehensive insights for the following text, considering the persona and job context.
         
-        Text: {request.text}
-        Persona: {request.persona}
-        Job to be done: {request.job_to_be_done}
-        Document Context: {request.document_context or "None"}
+        Text: {request.get("text", "")}
+        Persona: {request.get("persona", "")}
+        Job to be done: {request.get("job_to_be_done", "")}
+        Document Context: {request.get("document_context", "None")}
         
         Generate comprehensive analysis in the following JSON format:
         {{
@@ -1538,7 +1541,7 @@ async def get_cross_connections(
         raise HTTPException(status_code=500, detail=f"Failed to get cross connections: {str(e)}")
 
 @app.post("/strategic-insights")
-async def generate_strategic_insights(request: InsightRequest):
+async def generate_strategic_insights(request: Dict[str, Any]):
     """Generate strategic insights from text content"""
     try:
         # Use Gemini to generate strategic insights
@@ -1547,10 +1550,10 @@ async def generate_strategic_insights(request: InsightRequest):
         prompt = f"""
         Generate strategic insights for the following text, considering the persona and job context.
         
-        Text: {request.text}
-        Persona: {request.persona}
-        Job to be done: {request.job_to_be_done}
-        Document Context: {request.document_context or "None"}
+        Text: {request.get("text", "")}
+        Persona: {request.get("persona", "")}
+        Job to be done: {request.get("job_to_be_done", "")}
+        Document Context: {request.get("document_context", "None")}
         
         Generate strategic analysis in the following JSON format:
         {{
@@ -1927,3 +1930,6 @@ async def get_audio_file(filename: str):
 
 
 # app.include_router(generate_insights.router, prefix="/insights", tags=["Insights"])  # Removed - router doesn't exist
+
+# Include insight router
+app.include_router(insight_router, prefix="/api/v1")

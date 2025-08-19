@@ -11,7 +11,7 @@ def create_env_file():
     """Create a .env file with the required environment variables."""
     
     env_content = """# Gemini API Configuration
-GEMINI_API_KEY=AIzaSyAEYT0RCElrr1U__4uAKIV0XpJ41Dum6ro
+GEMINI_API_KEY=AIzaSyAInqw9seke43AUqjjPA8ftJcJVggRKA6c
 
 # Azure Speech Services (optional - for TTS)
 # AZURE_SPEECH_KEY=your_azure_speech_key_here
@@ -29,7 +29,7 @@ GEMINI_API_KEY=AIzaSyAEYT0RCElrr1U__4uAKIV0XpJ41Dum6ro
             f.write(env_content)
         print(f"✅ Created .env file at: {env_file_path}")
         print("📝 Environment variables configured:")
-        print("   - GEMINI_API_KEY: AIzaSyAEYT0RCElrr1U__4uAKIV0XpJ41Dum6ro")
+        print("   - GEMINI_API_KEY: AIzaSyAInqw9seke43AUqjjPA8ftJcJVggRKA6c")
         return True
     except Exception as e:
         print(f"❌ Error creating .env file: {e}")
@@ -77,7 +77,7 @@ def main():
         print("\n❌ Environment setup failed!")
         print("\n🔧 Manual setup:")
         print("1. Create a .env file in the backend directory")
-        print("2. Add: GEMINI_API_KEY=AIzaSyAEYT0RCElrr1U__4uAKIV0XpJ41Dum6ro")
+        print("2. Add: GEMINI_API_KEY=AIzaSyAInqw9seke43AUqjjPA8ftJcJVggRKA6c")
         print("3. Restart your backend server")
 
 if __name__ == "__main__":

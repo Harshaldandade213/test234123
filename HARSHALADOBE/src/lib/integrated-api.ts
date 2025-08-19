@@ -175,8 +175,8 @@ class IntegratedApiService {
     query?: string
   ): Promise<DetailedAnalysisResult> {
     try {
-      // Route through HARSHALADOBE backend which has access to the documents
-      const analysisResponse = await fetch(`${this.harshalaUrl}/analyze-documents`, {
+      // Use adobev4 backend for detailed analysis
+      const analysisResponse = await fetch(`${this.adobev4Url}/analyze-documents`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -201,61 +201,64 @@ class IntegratedApiService {
     }
   }
 
-  // Analyze query using adobev4's insights/generate endpoint
+  // Analyze query using adobev4's insights endpoint
   async analyzeQuery(query: string, documentIds?: string[]): Promise<DetailedAnalysisResult> {
     try {
-      // Get related passages from documents if available
-      let passages: string[] = [];
+      // Get relevant passages from documents if available
+      let passages: Array<{id: string, text: string}> = [];
       let documentSources: string[] = [];
       
       if (documentIds && documentIds.length > 0) {
         try {
-          // Get passages from the first few documents
-          const passagesResponse = await fetch(`${this.adobev4Url}/documents`, {
-            method: 'GET',
+          // Get passages from the documents using semantic search
+          const formData = new FormData();
+          formData.append('query', query);
+          formData.append('k', '5');
+          
+          const searchResponse = await fetch(`${this.adobev4Url}/search-documents`, {
+            method: 'POST',
+            body: formData,
           });
           
-          if (passagesResponse.ok) {
-            const documents = await passagesResponse.json();
-            // Extract text passages from documents with better content selection
-            documents.slice(0, 5).forEach((doc: any) => {
-              if (doc.content) {
-                // Split content into sentences and take the most relevant ones
-                const sentences = doc.content.split(/[.!?]+/).filter((s: string) => s.trim().length > 20);
-                if (sentences.length > 0) {
-                  // Take first 2-3 sentences that might be relevant
-                  const relevantSentences = sentences.slice(0, 3).join('. ') + '.';
-                  passages.push(relevantSentences.substring(0, 300) + "...");
-                  documentSources.push(doc.name || doc.title || 'Unknown Document');
-                }
-              } else if (doc.name) {
-                passages.push(`Content from ${doc.name} - Document available for analysis`);
-                documentSources.push(doc.name);
-              }
-            });
+          if (searchResponse.ok) {
+            const searchResults = await searchResponse.json();
+            passages = searchResults.results.map((result: any, index: number) => ({
+              id: `passage_${index}`,
+              text: result.passage || result.text || ''
+            }));
+            documentSources = searchResults.results.map((result: any) => result.source || 'Unknown Document');
           }
         } catch (error) {
           console.warn('Could not fetch document passages, using default passages');
-          passages = ["AI is evolving fast...", "LLMs are changing industries..."];
+          passages = [
+            { id: "default_1", text: "AI is evolving rapidly and transforming industries across the globe." },
+            { id: "default_2", text: "Machine learning models are becoming more sophisticated and accessible." }
+          ];
           documentSources = ["Default Content"];
         }
       } else {
         // Default passages if no documents available
-        passages = ["AI is evolving fast...", "LLMs are changing industries..."];
+        passages = [
+          { id: "default_1", text: "AI is evolving rapidly and transforming industries across the globe." },
+          { id: "default_2", text: "Machine learning models are becoming more sophisticated and accessible." }
+        ];
         documentSources = ["Default Content"];
       }
 
-      console.log('Sending query to /insights/generate:', { query, passagesCount: passages.length });
+      console.log('Sending query to /insights endpoint:', { query, passagesCount: passages.length });
 
-      const analysisResponse = await fetch(`${this.adobev4Url}/insights/generate`, {
+      const analysisResponse = await fetch(`${this.adobev4Url}/api/v1/insights`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           query: query,
-          passages: passages
+          passages: passages,
+          thinking_budget: 100  // Optional: limit reasoning for faster response
         }),
+        // Increase timeout for insights processing
+        signal: AbortSignal.timeout(60000) // 60 seconds timeout
       });
 
       if (analysisResponse.ok) {
@@ -266,13 +269,13 @@ class IntegratedApiService {
         const detailedAnalysis: DetailedAnalysisResult = {
           query: query,
           analysis: analysisData.insights ? analysisData.insights.map((insight: any, index: number) => ({
-            category: insight.type || 'insight',
-            justification: insight.content || insight.description || '',
-            quote: insight.content || '',
+            category: 'Key Insight',
+            justification: insight,
+            quote: insight,
             source: documentSources[index] || 'Generated Analysis',
-            passage_preview: passages[index] || insight.source_passage || ''
+            passage_preview: passages[index]?.text?.substring(0, 200) + '...' || ''
           })) : [],
-          summary: analysisData.summary || analysisData.analysis || 'Analysis completed successfully'
+          summary: `Analysis completed for query: "${query}" with ${passages.length} relevant passages`
         };
         
         return detailedAnalysis;

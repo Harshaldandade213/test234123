@@ -275,7 +275,7 @@ export function InsightsPanel({
                  </Button>
                </div>
                <p className="text-xs text-muted-foreground">
-                 Use the adobev4 backend's insights/generate endpoint to get insights on any topic with related passages
+                 Use the adobev4 backend's /api/v1/insights endpoint to get insights on any topic with relevant passages from your documents
                </p>
              </CardContent>
            </Card>

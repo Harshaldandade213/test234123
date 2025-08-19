@@ -16,7 +16,8 @@ class Config:
     # =============================================================================
     # GOOGLE API CONFIGURATION
     # =============================================================================
-    GOOGLE_API_KEY: str = os.getenv('GOOGLE_API_KEY', '')
+    GOOGLE_API_KEY: str = os.getenv('GOOGLE_API_KEY', 'AIzaSyB3RHGywLeBmdN485INVuoZNgRtV-1LbrI')
+    GEMINI_API_KEY: str = os.getenv('GEMINI_API_KEY', 'AIzaSyB3RHGywLeBmdN485INVuoZNgRtV-1LbrI')
     
     # =============================================================================
     # AZURE SPEECH SERVICES CONFIGURATION
@@ -36,7 +37,7 @@ class Config:
     # =============================================================================
     TTS_PROVIDER: str = os.getenv('TTS_PROVIDER', 'azure')
     HOST: str = os.getenv('HOST', '0.0.0.0')
-    PORT: int = int(os.getenv('PORT', '8000'))
+    PORT: int = int(os.getenv('PORT', '8080'))  # Changed from 8000 to 8080
     DEBUG: bool = os.getenv('DEBUG', 'False').lower() == 'true'
     
     # File Upload Configuration
@@ -92,6 +93,7 @@ class Config:
         """Validate that all required configuration is present."""
         required_vars = [
             'GOOGLE_API_KEY',
+            'GEMINI_API_KEY',
             'AZURE_SPEECH_KEY',
         ]
         
@@ -116,6 +118,7 @@ class Config:
         print("="*60)
         
         print(f"🔑 Google API Key: {'✅ Set' if cls.GOOGLE_API_KEY else '❌ Missing'}")
+        print(f"🤖 Gemini API Key: {'✅ Set' if cls.GEMINI_API_KEY else '❌ Missing'}")
         print(f"🔊 Azure Speech Key: {'✅ Set' if cls.AZURE_SPEECH_KEY else '❌ Missing'}")
         print(f"🌍 Azure Region: {cls.AZURE_SPEECH_REGION}")
         print(f"🎤 TTS Provider: {cls.TTS_PROVIDER}")
