@@ -15,8 +15,6 @@ A modern, AI-powered PDF reading application with podcast generation capabilitie
 ```bash
 # Clone the repository and switch to the harshal branch
 git clone <your-repo-url>
-cd harshalAdobe
-git checkout harshal
 ```
 
 ### 2. Set Up Environment Variables
