@@ -1,258 +1,204 @@
-# 🐳 HARSHALADOBE Docker Setup Complete
+# Docker Setup Summary
 
-## ✅ **What's Been Created**
+## ✅ What Was Created
 
-Your HARSHALADOBE application has been fully dockerized with the following components:
+### 1. **docker-compose.yml**
+- Version 3.8
+- Two services: `frontend` (port 3000) and `adobev4-backend` (port 8080)
+- Custom network: `adobe-network`
+- Health checks for both services
+- Volume mounts for persistent data
+- Environment variables configuration
 
-### 📁 **Docker Files Created**
-- `Dockerfile` - Multi-stage Docker build for all services
-- `docker-compose.yml` - Orchestration for all services
-- `.dockerignore` - Optimized build context
-- `env.template` - Environment variables template
-- `DOCKER_README.md` - Comprehensive documentation
-- `start-docker.sh` - Linux/macOS startup script
-- `start-docker.bat` - Windows batch startup script
-- `start-docker.ps1` - Windows PowerShell startup script
+### 2. **Dockerfiles**
+- **HARSHALADOBE/Dockerfile**: React frontend with Node.js 18 Alpine
+- **adobev4/Dockerfile**: Python 3.11 backend with FastAPI
 
-## 🏗️ **Application Architecture**
+### 3. **Configuration Files**
+- **.dockerignore**: Optimizes build context
+- **env.template**: Environment variables template
+- **setup-docker.sh**: Linux/Mac setup script
+- **setup-docker.bat**: Windows setup script
 
+### 4. **Documentation**
+- **DOCKER_README.md**: Comprehensive usage guide
+- **DOCKER_SETUP_SUMMARY.md**: This summary
+
+## 🎯 Key Features
+
+### ✅ Requirements Met
+- ✅ Docker Compose version 3.8
+- ✅ Frontend service on port 3000
+- ✅ AdobeV4 backend on port 8080
+- ✅ HARSHALADOBE backend excluded
+- ✅ Volume mounts for audio, documents, index
+- ✅ All specified environment variables
+- ✅ Health checks for both ports
+- ✅ Custom network and volumes
+- ✅ .env template with placeholders
+
+### 🔧 Service Configuration
+
+#### Frontend Service
+```yaml
+- Port: 3000
+- Build context: ./HARSHALADOBE
+- Health check: HTTP GET http://localhost:3000
+- Dependencies: Waits for backend to be healthy
 ```
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   Frontend      │    │ HARSHALADOBE     │    │   AdobeV4       │
-│   (Port 3000)   │    │ Backend          │    │ Backend         │
-│   React + Vite  │    │ (Port 8000)      │    │ (Port 8080)     │
-│                 │    │ FastAPI          │    │ Python          │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
+
+#### AdobeV4 Backend Service
+```yaml
+- Port: 8080
+- Build context: ./adobev4
+- Health check: HTTP GET http://localhost:8080/health
+- Volumes:
+  - ./adobev4/audio → /app/adobev4-backend/audio
+  - ./adobev4/documents → /app/adobev4-backend/documents
+  - ./adobev4/index → /app/adobev4-backend/index
 ```
 
-## 🚀 **Quick Start Commands**
+## 🚀 Quick Start
 
-### **Option 1: Automated Setup (Recommended)**
-
-**Windows:**
-```cmd
-start-docker.bat
-```
-
-**Windows PowerShell:**
-```powershell
-.\start-docker.ps1
-```
-
-**Linux/macOS:**
+### 1. Setup Environment
 ```bash
-./start-docker.sh
+# Windows
+setup-docker.bat
+
+# Linux/Mac
+chmod +x setup-docker.sh
+./setup-docker.sh
 ```
 
-### **Option 2: Manual Docker Compose**
-
-```bash
-# 1. Setup environment
-cp env.template .env
-# Edit .env with your values
-
-# 2. Create credentials directory
-mkdir credentials
-# Add your adbe-gcp.json to credentials/
-
-# 3. Build and run
-docker-compose up --build -d
+### 2. Configure API Keys
+Edit `.env` file:
+```env
+GOOGLE_API_KEY=your_actual_key
+AZURE_SPEECH_KEY=your_actual_key
+AZURE_SPEECH_REGION=your_region
 ```
 
-### **Option 3: Manual Docker Run**
-
-```bash
-docker run -d \
-  --name harshaladobe-full-stack \
-  -v $(pwd)/credentials:/credentials:ro \
-  -e ADOBE_EMBED_API_KEY=your_key \
-  -e LLM_PROVIDER=gemini \
-  -e GOOGLE_APPLICATION_CREDENTIALS=/credentials/adbe-gcp.json \
-  -e GEMINI_MODEL=gemini-2.5-flash \
-  -e GEMINI_API_KEY=AIzaSyAInqw9seke43AUqjjPA8ftJcJVggRKA6c \
-  -e TTS_PROVIDER=azure \
-  -e AZURE_TTS_KEY=your_tts_key \
-  -e AZURE_TTS_ENDPOINT=your_tts_endpoint \
-  -p 3000:3000 \
-  -p 8000:8000 \
-  -p 8080:8080 \
-  harshaladobe-app
-```
-
-## 🌐 **Access URLs**
-
-Once running, access your application at:
-
-- **🎨 Frontend**: http://localhost:3000
-- **🔧 HARSHALADOBE API**: http://localhost:8000
-- **📚 API Documentation**: http://localhost:8000/docs
-- **🔧 AdobeV4 API**: http://localhost:8080
-
-## ⚙️ **Environment Variables**
-
-Required environment variables (configure in `.env`):
-
-```bash
-# Adobe Embed API
-ADOBE_EMBED_API_KEY=your_adobe_embed_api_key_here
-
-# LLM Configuration
-LLM_PROVIDER=gemini
-GEMINI_MODEL=gemini-2.5-flash
-GEMINI_API_KEY=AIzaSyAInqw9seke43AUqjjPA8ftJcJVggRKA6c
-
-# Google Cloud
-GOOGLE_APPLICATION_CREDENTIALS=/credentials/adbe-gcp.json
-
-# Azure TTS
-TTS_PROVIDER=azure
-AZURE_TTS_KEY=your_azure_tts_key_here
-AZURE_TTS_ENDPOINT=your_azure_tts_endpoint_here
-AZURE_SPEECH_KEY=6LKDbzy1pkGLZNMuTjSxf8hrte5dGlAKFWAHX7R0eczacngvw1reJQQJ99BHACGhslBXJ3w3AAAYACOGhON1
-AZURE_SPEECH_REGION=centralindia
-
-# Adobe Client
-ADOBE_CLIENT_ID=d09f55f4ad4947649871706908700c76
-```
-
-## 📁 **Directory Structure**
-
-```
-harshaladobe/
-├── Dockerfile                 # Multi-stage Docker build
-├── docker-compose.yml         # Docker Compose configuration
-├── .dockerignore             # Docker build exclusions
-├── env.template              # Environment variables template
-├── credentials/              # Credentials directory (mounted)
-│   └── adbe-gcp.json        # Google Cloud credentials
-├── HARSHALADOBE/            # Frontend and HARSHALADOBE backend
-│   ├── src/                 # Frontend source
-│   ├── backend/             # HARSHALADOBE backend
-│   └── package.json         # Frontend dependencies
-└── adobev4/                 # AdobeV4 backend
-    ├── app.py               # Main application
-    └── requirements.txt     # Python dependencies
-```
-
-## 🔧 **Management Commands**
-
-### **View Logs**
-```bash
-# All services
-docker-compose logs -f
-
-# Specific service
-docker-compose logs harshaladobe-app
-```
-
-### **Stop Services**
-```bash
-docker-compose down
-```
-
-### **Restart Services**
-```bash
-docker-compose restart
-```
-
-### **Rebuild After Changes**
+### 3. Build and Run
 ```bash
 docker-compose up --build
 ```
 
-### **Access Container Shell**
-```bash
-docker exec -it harshaladobe-full-stack bash
+### 4. Access Application
+- **Frontend**: http://localhost:3000
+- **Backend**: http://localhost:8080
+
+## 📁 File Structure
+```
+.
+├── docker-compose.yml          # Main configuration
+├── .dockerignore              # Build exclusions
+├── env.template               # Environment template
+├── setup-docker.sh            # Linux/Mac setup
+├── setup-docker.bat           # Windows setup
+├── DOCKER_README.md           # Comprehensive guide
+├── DOCKER_SETUP_SUMMARY.md    # This file
+├── HARSHALADOBE/
+│   └── Dockerfile             # Frontend Dockerfile
+└── adobev4/
+    └── Dockerfile             # Backend Dockerfile
 ```
 
-## 🎙️ **Podcast Feature Status**
+## 🔍 Health Checks
 
-✅ **Fully Functional** with your new Gemini API key:
-- **API Key**: `AIzaSyAInqw9seke43AUqjjPA8ftJcJVggRKA6c`
-- **Quota**: Fresh quota, no more quota exceeded errors
-- **Features**: 
-  - Manual query input
-  - Auto-generation on paste
-  - Audio generation and playback
-  - Transcript display
+Both services include health checks:
+- **Frontend**: `curl -f http://localhost:3000`
+- **Backend**: `curl -f http://localhost:8080/health`
 
-## 🔍 **Health Monitoring**
+## 🌐 Network
 
-The application includes:
-- **Health checks** for all services
-- **Automatic restart** on failure
-- **Resource monitoring** via Docker stats
-- **Log aggregation** for debugging
+- **Network Name**: `adobe-network`
+- **Type**: Bridge network
+- **Services**: frontend, adobev4-backend
 
-## 🛡️ **Security Features**
+## 📊 Volumes
 
-- **Credentials mounted as read-only**
-- **Environment variables** for sensitive data
-- **No hardcoded secrets** in images
-- **Secure file permissions**
+### Named Volumes
+- `adobe-audio`
+- `adobe-documents`
+- `adobe-index`
 
-## 📊 **Performance Optimizations**
+### Bind Mounts
+- `./adobev4/audio` → `/app/adobev4-backend/audio`
+- `./adobev4/documents` → `/app/adobev4-backend/documents`
+- `./adobev4/index` → `/app/adobev4-backend/index`
 
-- **Multi-stage builds** reduce image size
-- **Layer caching** for faster rebuilds
-- **Volume mounts** for persistent data
-- **Resource limits** and monitoring
+## 🔄 Environment Variables
 
-## 🚨 **Troubleshooting**
+### Frontend
+- `VITE_ADOBEV4_URL=http://localhost:8080`
 
-### **Common Issues**
+### Backend
+- `GOOGLE_API_KEY=${GOOGLE_API_KEY}`
+- `AZURE_SPEECH_KEY=${AZURE_SPEECH_KEY}`
+- `AZURE_SPEECH_REGION=${AZURE_SPEECH_REGION}`
+- `TTS_PROVIDER=azure`
+- `HOST=0.0.0.0`
+- `PORT=8080`
+- `DEBUG=true`
+- `DEVELOPMENT_MODE=true`
+- `VERBOSE_LOGGING=false`
 
-1. **Port Already in Use**
-   ```bash
-   # Check what's using the ports
-   netstat -tulpn | grep :3000
-   netstat -tulpn | grep :8000
-   netstat -tulpn | grep :8080
-   ```
+## 🛠️ Useful Commands
 
-2. **Docker Not Running**
-   ```bash
-   # Start Docker Desktop (Windows/macOS)
-   # Or start Docker daemon (Linux)
-   sudo systemctl start docker
-   ```
-
-3. **Permission Issues**
-   ```bash
-   # Fix credential permissions
-   chmod 600 credentials/adbe-gcp.json
-   ```
-
-4. **Environment Variables**
-   ```bash
-   # Check .env file
-   cat .env
-   ```
-
-### **Debug Mode**
 ```bash
-# Run with verbose output
-docker-compose up --build --verbose
+# Build and start
+docker-compose up --build
+
+# Start in background
+docker-compose up -d
+
+# Stop services
+docker-compose down
+
+# View logs
+docker-compose logs
+
+# Check status
+docker-compose ps
+
+# Restart services
+docker-compose restart
 ```
 
-## 🎉 **Success Indicators**
+## ✅ Verification
 
-Your application is successfully running when you see:
+To verify everything is working:
 
-✅ **Frontend accessible** at http://localhost:3000
-✅ **HARSHALADOBE Backend** responding at http://localhost:8000
-✅ **AdobeV4 Backend** responding at http://localhost:8080
-✅ **API Documentation** available at http://localhost:8000/docs
-✅ **Podcast generation** working with your new API key
+1. **Check services are running**:
+   ```bash
+   docker-compose ps
+   ```
 
-## 📞 **Support**
+2. **Check health endpoints**:
+   ```bash
+   curl http://localhost:3000
+   curl http://localhost:8080/health
+   ```
 
-For issues:
-1. Check the troubleshooting section
-2. Review container logs: `docker-compose logs`
-3. Verify environment configuration
-4. Ensure all prerequisites are met
+3. **Check logs**:
+   ```bash
+   docker-compose logs
+   ```
 
----
+## 🎉 Success Criteria
 
-**🎊 Congratulations! Your HARSHALADOBE application is now fully dockerized and ready to run!**
+The setup is successful when:
+- ✅ `docker-compose up --build` completes without errors
+- ✅ Frontend accessible at http://localhost:3000
+- ✅ Backend accessible at http://localhost:8080
+- ✅ Health checks pass for both services
+- ✅ Environment variables are properly loaded
+- ✅ Volume mounts are working correctly
+
+## 📝 Notes
+
+- The HARSHALADOBE backend (port 8000) is **NOT** included
+- All persistent data is stored in mounted volumes
+- Services automatically restart on failure
+- Health checks ensure service availability
+- API keys must be configured in `.env` file before running

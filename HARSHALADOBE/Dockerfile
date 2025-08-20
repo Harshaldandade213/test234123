@@ -18,12 +18,12 @@ RUN npm ci
 # Copy source code
 COPY . .
 
-# Expose port 3000
-EXPOSE 3000
+# Expose port 5173 (Vite default)
+EXPOSE 5173
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-  CMD curl -f http://localhost:3000 || exit 1
+  CMD curl -f http://localhost:5173 || exit 1
 
-# Start the development server instead of building
-CMD ["npm", "run", "dev"]
+# Start the development server with correct host and port
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]
